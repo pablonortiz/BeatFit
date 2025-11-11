@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,17 @@ import { theme } from '../theme';
 import { Button, Card } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { isUsingRemoteStorage } from '../services/storage';
+import { requestMicrophonePermission } from '../hooks/useVoiceRecognition';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+
+  // Pedir permiso de micrófono al montar
+  useEffect(() => {
+    requestMicrophonePermission();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>

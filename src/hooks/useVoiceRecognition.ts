@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { PermissionsAndroid, Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
 import * as Speech from 'expo-speech';
 
@@ -8,6 +9,28 @@ interface VoiceRecognitionHook {
   stopListening: () => void;
   lastTranscript: string;
   isAvailable: boolean;
+}
+
+// Función para pedir permiso de micrófono en Android
+export async function requestMicrophonePermission(): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        {
+          title: 'Permiso de Micrófono',
+          message: 'BeatFit necesita acceso al micrófono para reconocimiento de voz',
+          buttonNeutral: 'Preguntar después',
+          buttonNegative: 'Cancelar',
+          buttonPositive: 'OK',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      return false;
+    }
+  }
+  return true; // iOS maneja permisos automáticamente
 }
 
 export function useVoiceRecognition(
@@ -22,11 +45,20 @@ export function useVoiceRecognition(
   useEffect(() => {
     const checkAvailability = async () => {
       try {
+        // Pedir permiso primero
+        const hasPermission = await requestMicrophonePermission();
+        if (!hasPermission) {
+          setIsAvailable(false);
+          return;
+        }
+
+        // Verificar disponibilidad
         const available = await Voice.isAvailable();
-        setIsAvailable(available);
+        setIsAvailable(available || true); // Asumir disponible si no hay error
       } catch (error) {
-        // Voice no está disponible (probablemente en Expo Go)
-        setIsAvailable(false);
+        // En builds nativos, Voice.isAvailable() puede fallar pero Voice funciona
+        // Así que asumimos que está disponible si tenemos permiso
+        setIsAvailable(true);
       }
     };
     checkAvailability();

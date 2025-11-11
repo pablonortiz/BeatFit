@@ -24,7 +24,7 @@ interface DurationPickerProps {
 const ITEM_HEIGHT = 50;
 const VISIBLE_ITEMS = 5;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
-const REPEAT_COUNT = 100; // Repetir los valores 100 veces para scroll infinito
+const REPEAT_COUNT = 3; // Repetir los valores 3 veces para scroll infinito (suficiente para UX)
 
 export function DurationPicker({
   visible,
@@ -43,8 +43,6 @@ export function DurationPicker({
   const hoursScrollRef = useRef<ScrollView>(null);
   const minutesScrollRef = useRef<ScrollView>(null);
   const secondsScrollRef = useRef<ScrollView>(null);
-
-  const lastHapticValue = useRef({ hours: hours, minutes: minutes, seconds: seconds });
 
   // Generar arrays infinitos
   const createInfiniteArray = (max: number) => {
@@ -101,13 +99,6 @@ export function DurationPicker({
     const index = Math.round(offsetY / ITEM_HEIGHT);
     const value = index % maxValue;
 
-    // Haptic feedback cuando cambia el valor
-    const lastValue = lastHapticValue.current[type];
-    if (lastValue !== value) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      lastHapticValue.current[type] = value;
-    }
-
     setter(value);
   };
 
@@ -125,6 +116,9 @@ export function DurationPicker({
       y: nearestIndex * ITEM_HEIGHT,
       animated: true,
     });
+
+    // Haptic feedback cuando termina el scroll
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handleConfirm = () => {
