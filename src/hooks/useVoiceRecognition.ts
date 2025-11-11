@@ -107,6 +107,16 @@ export function useVoiceRecognition(
   useEffect(() => {
     const checkAvailability = async () => {
       try {
+        // Verificar que el módulo nativo existe (no funciona en Expo Go)
+        // @ts-ignore - acceder a propiedad privada para verificar módulo nativo
+        const hasNativeModule = Voice && typeof Voice.start === 'function';
+
+        if (!hasNativeModule) {
+          console.log('[Voice] Módulo nativo no disponible (probablemente Expo Go)');
+          setIsAvailable(false);
+          return;
+        }
+
         console.log('[Voice] Pidiendo permiso de micrófono');
         const hasPermission = await requestMicrophonePermission();
 
@@ -116,11 +126,28 @@ export function useVoiceRecognition(
           return;
         }
 
-        console.log('[Voice] Permiso otorgado, Voice disponible');
+        // Intentar verificar disponibilidad con timeout
+        const checkWithTimeout = Promise.race([
+          Voice.isAvailable(),
+          new Promise((_, reject) => setTimeout(() => reject('timeout'), 1000))
+        ]);
+
+        await checkWithTimeout;
+        console.log('[Voice] Módulo nativo disponible y funcional');
         setIsAvailable(true);
       } catch (error) {
         console.log('[Voice] Error verificando disponibilidad:', error);
-        setIsAvailable(true); // Asumir disponible en builds nativos
+        // Si Voice.isAvailable() falla, verificamos si es por timeout o error real
+        // En Expo Go, dará error "Cannot read property"
+        const errorMsg = String(error);
+        if (errorMsg.includes('null') || errorMsg.includes('undefined')) {
+          console.log('[Voice] Módulo nativo no disponible - usar build nativo');
+          setIsAvailable(false);
+        } else {
+          // Timeout o error menor - asumir disponible
+          console.log('[Voice] Asumiendo disponible (build nativo)');
+          setIsAvailable(true);
+        }
       }
     };
     checkAvailability();

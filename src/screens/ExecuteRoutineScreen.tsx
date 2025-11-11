@@ -305,14 +305,17 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               <Text style={styles.repsValue}>{currentActivity.reps}</Text>
             </View>
 
-            {/* Voice Recognition Indicator */}
+            {/* Voice Recognition Indicator - PROMINENTE */}
             {isVoiceAvailable && isListening && (
-              <View style={styles.voiceIndicator}>
-                <Ionicons name="mic" size={24} color={theme.colors.accent} />
+              <Animated.View style={[styles.voiceIndicator, { transform: [{ scale: pulseAnim }] }]}>
+                <Ionicons name="mic-circle" size={48} color={theme.colors.accent} />
                 <Text style={styles.voiceText}>
-                  Di "terminé" o toca el botón
+                  Escuchando...
                 </Text>
-              </View>
+                <Text style={styles.voiceHint}>
+                  Di "terminé", "listo" o "siguiente"
+                </Text>
+              </Animated.View>
             )}
 
             {/* Info cuando voz no disponible */}
@@ -433,18 +436,26 @@ const styles = StyleSheet.create({
     ...theme.typography.timer,
   },
   voiceIndicator: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
     backgroundColor: theme.colors.accent + '20',
-    borderRadius: theme.borderRadius.md,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 2,
+    borderColor: theme.colors.accent + '40',
   },
   voiceText: {
-    ...theme.typography.bodySmall,
+    ...theme.typography.h4,
     color: theme.colors.accent,
+    marginTop: theme.spacing.sm,
+    fontWeight: '700',
+  },
+  voiceHint: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
+    marginTop: theme.spacing.xs,
+    textAlign: 'center',
   },
   infoIndicator: {
     flexDirection: 'row',
