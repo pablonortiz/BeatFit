@@ -11,6 +11,7 @@ import CreateRoutineScreen from '../screens/CreateRoutineScreen';
 import ExecuteRoutineScreen from '../screens/ExecuteRoutineScreen';
 import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
 import StatsScreen from '../screens/StatsScreen';
+import ManageExercisesScreen from '../screens/ManageExercisesScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -77,6 +78,11 @@ export function AppNavigator() {
           name="Stats"
           component={StatsScreen}
           options={{ title: 'Estadísticas' }}
+        />
+        <Stack.Screen
+          name="ManageExercises"
+          component={ManageExercisesScreen}
+          options={{ title: 'Gestionar Ejercicios' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

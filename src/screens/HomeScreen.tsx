@@ -96,25 +96,11 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionCard, !isUsingRemoteStorage && styles.actionCardDisabled]}
-            disabled={!isUsingRemoteStorage}
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('ManageExercises')}
           >
-            <Ionicons
-              name="cloud-upload"
-              size={32}
-              color={isUsingRemoteStorage ? theme.colors.info : theme.colors.textDisabled}
-            />
-            <Text
-              style={[
-                styles.actionText,
-                !isUsingRemoteStorage && styles.actionTextDisabled,
-              ]}
-            >
-              Sincronizar
-            </Text>
-            {!isUsingRemoteStorage && (
-              <Text style={styles.comingSoon}>Próximamente</Text>
-            )}
+            <Ionicons name="barbell" size={32} color={theme.colors.success} />
+            <Text style={styles.actionText}>Ejercicios</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

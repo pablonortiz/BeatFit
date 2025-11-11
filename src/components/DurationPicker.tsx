@@ -6,8 +6,10 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { Button } from './Button';
@@ -22,6 +24,7 @@ interface DurationPickerProps {
 const ITEM_HEIGHT = 50;
 const VISIBLE_ITEMS = 5;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+const REPEAT_COUNT = 100; // Repetir los valores 100 veces para scroll infinito
 
 export function DurationPicker({
   visible,
@@ -41,25 +44,47 @@ export function DurationPicker({
   const minutesScrollRef = useRef<ScrollView>(null);
   const secondsScrollRef = useRef<ScrollView>(null);
 
-  // Generar arrays de valores
-  const hoursArray = Array.from({ length: 24 }, (_, i) => i);
-  const minutesArray = Array.from({ length: 60 }, (_, i) => i);
-  const secondsArray = Array.from({ length: 60 }, (_, i) => i);
+  const lastHapticValue = useRef({ hours: hours, minutes: minutes, seconds: seconds });
+
+  // Generar arrays infinitos
+  const createInfiniteArray = (max: number) => {
+    const arr = [];
+    for (let i = 0; i < REPEAT_COUNT; i++) {
+      for (let j = 0; j < max; j++) {
+        arr.push(j);
+      }
+    }
+    return arr;
+  };
+
+  const hoursArray = createInfiniteArray(24);
+  const minutesArray = createInfiniteArray(60);
+  const secondsArray = createInfiniteArray(60);
+
+  // Calcular índice central para cada array
+  const getMiddleIndex = (value: number, max: number) => {
+    const middleRepeat = Math.floor(REPEAT_COUNT / 2);
+    return middleRepeat * max + value;
+  };
 
   useEffect(() => {
     if (visible) {
-      // Scroll a la posición inicial
+      // Scroll a la posición inicial en el medio del array infinito
       setTimeout(() => {
+        const hoursIndex = getMiddleIndex(selectedHours, 24);
+        const minutesIndex = getMiddleIndex(selectedMinutes, 60);
+        const secondsIndex = getMiddleIndex(selectedSeconds, 60);
+
         hoursScrollRef.current?.scrollTo({
-          y: selectedHours * ITEM_HEIGHT,
+          y: hoursIndex * ITEM_HEIGHT,
           animated: false,
         });
         minutesScrollRef.current?.scrollTo({
-          y: selectedMinutes * ITEM_HEIGHT,
+          y: minutesIndex * ITEM_HEIGHT,
           animated: false,
         });
         secondsScrollRef.current?.scrollTo({
-          y: selectedSeconds * ITEM_HEIGHT,
+          y: secondsIndex * ITEM_HEIGHT,
           animated: false,
         });
       }, 100);
@@ -67,23 +92,37 @@ export function DurationPicker({
   }, [visible]);
 
   const handleScroll = (
-    event: any,
+    event: NativeSyntheticEvent<NativeScrollEvent>,
     setter: (value: number) => void,
+    maxValue: number,
+    type: 'hours' | 'minutes' | 'seconds'
+  ) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const value = index % maxValue;
+
+    // Haptic feedback cuando cambia el valor
+    const lastValue = lastHapticValue.current[type];
+    if (lastValue !== value) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      lastHapticValue.current[type] = value;
+    }
+
+    setter(value);
+  };
+
+  const handleMomentumScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+    ref: React.RefObject<ScrollView>,
+    value: number,
     maxValue: number
   ) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     const index = Math.round(offsetY / ITEM_HEIGHT);
-    const validIndex = Math.max(0, Math.min(index, maxValue - 1));
-    setter(validIndex);
-  };
+    const nearestIndex = Math.round(index / maxValue) * maxValue + value;
 
-  const handleMomentumScrollEnd = (
-    event: any,
-    ref: React.RefObject<ScrollView>,
-    value: number
-  ) => {
     ref.current?.scrollTo({
-      y: value * ITEM_HEIGHT,
+      y: nearestIndex * ITEM_HEIGHT,
       animated: true,
     });
   };
@@ -95,7 +134,13 @@ export function DurationPicker({
       return; // No permitir 0 segundos
     }
 
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onSelect(totalSeconds);
+    onClose();
+  };
+
+  const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onClose();
   };
 
@@ -104,7 +149,9 @@ export function DurationPicker({
     selectedValue: number,
     setter: (value: number) => void,
     scrollRef: React.RefObject<ScrollView>,
-    label: string
+    label: string,
+    maxValue: number,
+    type: 'hours' | 'minutes' | 'seconds'
   ) => {
     return (
       <View style={styles.pickerColumn}>
@@ -113,17 +160,17 @@ export function DurationPicker({
           showsVerticalScrollIndicator={false}
           snapToInterval={ITEM_HEIGHT}
           decelerationRate="fast"
-          onScroll={(e) => handleScroll(e, setter, values.length)}
+          onScroll={(e) => handleScroll(e, setter, maxValue, type)}
           scrollEventThrottle={16}
           onMomentumScrollEnd={(e) =>
-            handleMomentumScrollEnd(e, scrollRef, selectedValue)
+            handleMomentumScrollEnd(e, scrollRef, selectedValue, maxValue)
           }
           contentContainerStyle={{
             paddingVertical: ITEM_HEIGHT * 2,
           }}
         >
-          {values.map((value) => (
-            <View key={value} style={styles.pickerItem}>
+          {values.map((value, index) => (
+            <View key={index} style={styles.pickerItem}>
               <Text
                 style={[
                   styles.pickerItemText,
@@ -141,12 +188,12 @@ export function DurationPicker({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>Seleccionar Duración</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={handleClose}>
               <Ionicons name="close" size={28} color={theme.colors.textPrimary} />
             </TouchableOpacity>
           </View>
@@ -160,21 +207,27 @@ export function DurationPicker({
                 selectedHours,
                 setSelectedHours,
                 hoursScrollRef,
-                'horas'
+                'horas',
+                24,
+                'hours'
               )}
               {renderPickerColumn(
                 minutesArray,
                 selectedMinutes,
                 setSelectedMinutes,
                 minutesScrollRef,
-                'min'
+                'min',
+                60,
+                'minutes'
               )}
               {renderPickerColumn(
                 secondsArray,
                 selectedSeconds,
                 setSelectedSeconds,
                 secondsScrollRef,
-                'seg'
+                'seg',
+                60,
+                'seconds'
               )}
             </View>
           </View>
@@ -194,7 +247,7 @@ export function DurationPicker({
           <View style={styles.footer}>
             <Button
               title="Cancelar"
-              onPress={onClose}
+              onPress={handleClose}
               variant="ghost"
               size="medium"
               style={{ flex: 1 }}
