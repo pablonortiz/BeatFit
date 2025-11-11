@@ -42,7 +42,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
+    "plugins": [
+      "./plugins/withAndroidXFix.js"
+    ],
     "extra": {
       "eas": {
         "projectId": "64ed0cdc-f915-44a0-99f0-7e3f8dcfbc60"
