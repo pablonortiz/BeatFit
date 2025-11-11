@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import { theme } from './src/theme';
 
 const ONBOARDING_KEY = '@BeatFit:onboarding_completed';
 
@@ -43,17 +45,30 @@ export default function App() {
   };
 
   if (isLoading) {
-    return null; // O un splash screen
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+      </View>
+    );
   }
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
-      {showOnboarding ? (
-        <OnboardingScreen onComplete={handleOnboardingComplete} />
-      ) : (
-        <AppNavigator />
-      )}
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        {showOnboarding ? (
+          <OnboardingScreen onComplete={handleOnboardingComplete} />
+        ) : (
+          <AppNavigator />
+        )}
+      </View>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+});

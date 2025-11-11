@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import { theme } from '../theme';
@@ -14,9 +14,23 @@ import StatsScreen from '../screens/StatsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Tema personalizado para NavigationContainer
+const navigationTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: theme.colors.background,
+    card: theme.colors.background,
+    primary: theme.colors.primary,
+    text: theme.colors.textPrimary,
+    border: theme.colors.border,
+    notification: theme.colors.accent,
+  },
+};
+
 export function AppNavigator() {
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
@@ -30,9 +44,8 @@ export function AppNavigator() {
           contentStyle: {
             backgroundColor: theme.colors.background,
           },
-          animation: 'slide_from_right',
-          animationDuration: 200,
-          customAnimationOnGesture: true,
+          animation: 'fade',
+          animationDuration: 150,
         }}
       >
         <Stack.Screen
