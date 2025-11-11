@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { Button } from './Button';
 import { IconPicker } from './IconPicker';
+import { DurationPicker } from './DurationPicker';
 import { Activity, ActivityType, ExerciseTemplate, ExerciseIcon, ExerciseType } from '../types';
 import { generateId, searchExercises } from '../utils/helpers';
 import { useExercises } from '../hooks/useStorage';
@@ -36,6 +37,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
   const [reps, setReps] = useState('10');
   const [selectedIcon, setSelectedIcon] = useState<ExerciseIcon>('fitness');
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [selectedExerciseTemplate, setSelectedExerciseTemplate] = useState<ExerciseTemplate | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -53,6 +55,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
     setSelectedIcon('fitness');
     setSelectedExerciseTemplate(null);
     setShowSuggestions(false);
+    setShowDurationPicker(false);
   };
 
   const handleClose = () => {
@@ -71,6 +74,23 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
     setName(text);
     setSelectedExerciseTemplate(null);
     setShowSuggestions(text.trim().length > 0);
+  };
+
+  const handleDurationSelect = (seconds: number) => {
+    setDuration(seconds.toString());
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+
+    const parts = [];
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    if (s > 0) parts.push(`${s}s`);
+
+    return parts.join(' ') || '0s';
   };
 
   const handleAdd = async () => {
@@ -132,7 +152,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Tipo de actividad */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Tipo</Text>
@@ -218,7 +238,11 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
               {activityType === 'exercise' && showSuggestions && filteredExercises.length > 0 && (
                 <View style={styles.suggestionsContainer}>
                   <Text style={styles.suggestionsTitle}>Ejercicios guardados:</Text>
-                  <View style={styles.searchResults}>
+                  <ScrollView
+                    style={styles.searchResults}
+                    nestedScrollEnabled={true}
+                    keyboardShouldPersistTaps="handled"
+                  >
                     {filteredExercises.slice(0, 5).map((exercise) => (
                       <TouchableOpacity
                         key={exercise.id}
@@ -230,7 +254,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                         <Ionicons name="arrow-forward" size={20} color={theme.colors.textTertiary} />
                       </TouchableOpacity>
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
               )}
 
@@ -301,15 +325,17 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
             <View style={styles.section}>
               {(activityType === 'rest' || exerciseType === 'time') ? (
                 <>
-                  <Text style={styles.sectionTitle}>Duración (segundos)</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="30"
-                    placeholderTextColor={theme.colors.textTertiary}
-                    value={duration}
-                    onChangeText={setDuration}
-                    keyboardType="numeric"
-                  />
+                  <Text style={styles.sectionTitle}>Duración</Text>
+                  <TouchableOpacity
+                    style={styles.durationButton}
+                    onPress={() => setShowDurationPicker(true)}
+                  >
+                    <Ionicons name="time-outline" size={24} color={theme.colors.primary} />
+                    <Text style={styles.durationButtonText}>
+                      {formatDuration(parseInt(duration))}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textTertiary} />
+                  </TouchableOpacity>
                 </>
               ) : (
                 <>
@@ -350,6 +376,12 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
           onSelect={setSelectedIcon}
           visible={showIconPicker}
           onClose={() => setShowIconPicker(false)}
+        />
+        <DurationPicker
+          visible={showDurationPicker}
+          onClose={() => setShowDurationPicker(false)}
+          onSelect={handleDurationSelect}
+          initialSeconds={parseInt(duration) || 30}
         />
       </KeyboardAvoidingView>
     </Modal>
@@ -479,6 +511,20 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     ...theme.typography.body,
     color: theme.colors.textPrimary,
+  },
+  durationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.colors.backgroundCardLight,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  durationButtonText: {
+    flex: 1,
+    ...theme.typography.h3,
+    color: theme.colors.primary,
   },
   footer: {
     flexDirection: 'row',

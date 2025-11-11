@@ -30,7 +30,7 @@ export function AppNavigator() {
           contentStyle: {
             backgroundColor: theme.colors.background,
           },
-          animation: 'slide_from_right',
+          animation: 'fade_from_bottom',
         }}
       >
         <Stack.Screen

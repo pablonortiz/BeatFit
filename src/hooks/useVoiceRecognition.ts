@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import Voice from '@react-native-voice/voice';
 import * as Speech from 'expo-speech';
-
-// Nota: Expo no tiene reconocimiento de voz integrado de forma nativa
-// Para una implementación completa, se necesitaría @react-native-voice/voice
-// Por ahora, vamos a simular la funcionalidad usando Speech para TTS
-// y en producción se debe integrar una biblioteca de reconocimiento de voz
 
 interface VoiceRecognitionHook {
   isListening: boolean;
@@ -20,36 +16,59 @@ export function useVoiceRecognition(
   const [isListening, setIsListening] = useState(false);
   const [lastTranscript, setLastTranscript] = useState('');
 
-  const startListening = useCallback(() => {
-    setIsListening(true);
-    // En producción, aquí se iniciaría el reconocimiento de voz real
-    // Ejemplo con @react-native-voice/voice:
-    // Voice.start('es-ES');
+  const startListening = useCallback(async () => {
+    try {
+      setIsListening(true);
+      await Voice.start('es-ES');
+    } catch (error) {
+      console.error('Error starting voice recognition:', error);
+      setIsListening(false);
+    }
   }, []);
 
-  const stopListening = useCallback(() => {
-    setIsListening(false);
-    // En producción:
-    // Voice.stop();
+  const stopListening = useCallback(async () => {
+    try {
+      setIsListening(false);
+      await Voice.stop();
+      await Voice.destroy();
+    } catch (error) {
+      console.error('Error stopping voice recognition:', error);
+    }
   }, []);
 
   useEffect(() => {
-    // En producción, configurar listeners para el reconocimiento de voz
-    // Voice.onSpeechResults = (e) => {
-    //   const text = e.value[0].toLowerCase();
-    //   setLastTranscript(text);
-    //
-    //   if (keywords.some(keyword => text.includes(keyword))) {
-    //     onDone();
-    //     stopListening();
-    //   }
-    // };
+    // Configurar listeners para el reconocimiento de voz
+    Voice.onSpeechResults = (e) => {
+      if (e.value && e.value.length > 0) {
+        const text = e.value[0].toLowerCase();
+        setLastTranscript(text);
+
+        // Verificar si alguna palabra clave fue detectada
+        if (keywords.some(keyword => text.includes(keyword.toLowerCase()))) {
+          onDone();
+          stopListening();
+        }
+      }
+    };
+
+    Voice.onSpeechError = (e) => {
+      console.error('Speech recognition error:', e);
+      setIsListening(false);
+    };
+
+    Voice.onSpeechEnd = () => {
+      // Reiniciar automáticamente si todavía estamos en modo listening
+      if (isListening) {
+        startListening();
+      }
+    };
 
     return () => {
       // Cleanup
       stopListening();
+      Voice.destroy().then(Voice.removeAllListeners);
     };
-  }, [onDone, keywords, stopListening]);
+  }, [onDone, keywords, stopListening, isListening, startListening]);
 
   return {
     isListening,
