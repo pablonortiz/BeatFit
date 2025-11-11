@@ -43,7 +43,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "./plugins/withAndroidXFix.js"
+      "./plugins/withAndroidXFix.js",
+      "./plugins/withVoiceConfig.js"
     ],
     "extra": {
       "eas": {
