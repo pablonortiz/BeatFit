@@ -30,7 +30,9 @@ export function AppNavigator() {
           contentStyle: {
             backgroundColor: theme.colors.background,
           },
-          animation: 'fade_from_bottom',
+          animation: 'slide_from_right',
+          animationDuration: 200,
+          customAnimationOnGesture: true,
         }}
       >
         <Stack.Screen

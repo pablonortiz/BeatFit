@@ -145,7 +145,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   ]);
 
   // Reconocimiento de voz para ejercicios por repeticiones
-  const { isListening, startListening, stopListening } = useVoiceRecognition(
+  const { isListening, startListening, stopListening, isAvailable: isVoiceAvailable } = useVoiceRecognition(
     goToNextActivity
   );
 
@@ -306,11 +306,21 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             </View>
 
             {/* Voice Recognition Indicator */}
-            {isListening && (
+            {isVoiceAvailable && isListening && (
               <View style={styles.voiceIndicator}>
                 <Ionicons name="mic" size={24} color={theme.colors.accent} />
                 <Text style={styles.voiceText}>
                   Di "terminé" o toca el botón
+                </Text>
+              </View>
+            )}
+
+            {/* Info cuando voz no disponible */}
+            {!isVoiceAvailable && (
+              <View style={styles.infoIndicator}>
+                <Ionicons name="information-circle" size={20} color={theme.colors.textTertiary} />
+                <Text style={styles.infoText}>
+                  Toca el botón cuando termines las repeticiones
                 </Text>
               </View>
             )}
@@ -435,6 +445,21 @@ const styles = StyleSheet.create({
   voiceText: {
     ...theme.typography.bodySmall,
     color: theme.colors.accent,
+  },
+  infoIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.backgroundCardLight,
+    borderRadius: theme.borderRadius.md,
+  },
+  infoText: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    flex: 1,
   },
   completeButton: {
     maxWidth: 300,

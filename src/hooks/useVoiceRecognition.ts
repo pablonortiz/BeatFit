@@ -7,6 +7,7 @@ interface VoiceRecognitionHook {
   startListening: () => void;
   stopListening: () => void;
   lastTranscript: string;
+  isAvailable: boolean;
 }
 
 export function useVoiceRecognition(
@@ -15,28 +16,57 @@ export function useVoiceRecognition(
 ): VoiceRecognitionHook {
   const [isListening, setIsListening] = useState(false);
   const [lastTranscript, setLastTranscript] = useState('');
+  const [isAvailable, setIsAvailable] = useState(false);
+
+  // Verificar disponibilidad de Voice al montar
+  useEffect(() => {
+    const checkAvailability = async () => {
+      try {
+        const available = await Voice.isAvailable();
+        setIsAvailable(available);
+      } catch (error) {
+        // Voice no está disponible (probablemente en Expo Go)
+        setIsAvailable(false);
+      }
+    };
+    checkAvailability();
+  }, []);
 
   const startListening = useCallback(async () => {
+    if (!isAvailable) {
+      // Voice no disponible, silenciar
+      return;
+    }
+
     try {
       setIsListening(true);
       await Voice.start('es-ES');
     } catch (error) {
-      console.error('Error starting voice recognition:', error);
+      // Silenciar error si Voice no está disponible
       setIsListening(false);
     }
-  }, []);
+  }, [isAvailable]);
 
   const stopListening = useCallback(async () => {
+    if (!isAvailable) {
+      setIsListening(false);
+      return;
+    }
+
     try {
       setIsListening(false);
       await Voice.stop();
       await Voice.destroy();
     } catch (error) {
-      console.error('Error stopping voice recognition:', error);
+      // Silenciar error
     }
-  }, []);
+  }, [isAvailable]);
 
   useEffect(() => {
+    if (!isAvailable) {
+      return;
+    }
+
     // Configurar listeners para el reconocimiento de voz
     Voice.onSpeechResults = (e) => {
       if (e.value && e.value.length > 0) {
@@ -52,7 +82,6 @@ export function useVoiceRecognition(
     };
 
     Voice.onSpeechError = (e) => {
-      console.error('Speech recognition error:', e);
       setIsListening(false);
     };
 
@@ -65,16 +94,19 @@ export function useVoiceRecognition(
 
     return () => {
       // Cleanup
-      stopListening();
-      Voice.destroy().then(Voice.removeAllListeners);
+      if (isAvailable) {
+        stopListening();
+        Voice.destroy().then(Voice.removeAllListeners).catch(() => {});
+      }
     };
-  }, [onDone, keywords, stopListening, isListening, startListening]);
+  }, [onDone, keywords, stopListening, isListening, startListening, isAvailable]);
 
   return {
     isListening,
     startListening,
     stopListening,
     lastTranscript,
+    isAvailable,
   };
 }
 
