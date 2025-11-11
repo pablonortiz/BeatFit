@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Dimensions,
   FlatList,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import { Button } from '../components';
 import { Ionicons } from '@expo/vector-icons';
@@ -136,7 +136,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.logo}>BeatFit</Text>
         {currentIndex < slides.length - 1 && (

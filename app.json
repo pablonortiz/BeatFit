@@ -36,13 +36,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      [
-        "expo-av",
-        {
-          "microphonePermission": "BeatFit necesita acceso al micrófono para reconocimiento de voz durante los ejercicios."
-        }
-      ]
-    ]
+    "plugins": []
   }
 }

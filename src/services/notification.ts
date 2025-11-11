@@ -1,49 +1,21 @@
-import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 
 class NotificationService {
-  private sound: Audio.Sound | null = null;
-
   async initialize() {
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-      });
-    } catch (error) {
-      console.error('Error initializing audio:', error);
-    }
+    // No requiere inicialización
   }
 
   async playCompletionSound() {
-    try {
-      // Crear un sonido simple usando Audio.Sound
-      // En producción, aquí cargarías un archivo de audio premium
-      const { sound } = await Audio.Sound.createAsync(
-        // Por ahora usaremos el sonido del sistema
-        // En producción reemplazar con: require('../../assets/sounds/completion.mp3')
-        { uri: 'https://www.soundjay.com/buttons/sounds/button-50.mp3' },
-        { shouldPlay: true, volume: 1.0 }
-      );
-
-      this.sound = sound;
-
-      // Liberar el sonido después de reproducirlo
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
-    } catch (error) {
-      console.error('Error playing sound:', error);
-    }
+    // TODO: Implementar con archivos de audio locales cuando estén listos
+    // Por ahora usamos solo vibración que es más efectivo durante el ejercicio
+    // En producción: agregar archivos .mp3 en assets/sounds/ y usar expo-audio
+    // Ejemplo: const sound = await Audio.load(require('../../assets/sounds/completion.mp3'));
+    //          await sound.play();
   }
 
   async vibrate() {
     try {
-      // Vibración premium con patrón
+      // Vibración premium con patrón de éxito
       await Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success
       );
@@ -53,18 +25,15 @@ class NotificationService {
   }
 
   async playNotification() {
-    // Reproducir sonido y vibrar simultáneamente
-    await Promise.all([
-      this.playCompletionSound(),
-      this.vibrate(),
-    ]);
+    // Por ahora solo vibrar - más efectivo durante el ejercicio
+    await this.vibrate();
+
+    // Nota: El sonido se puede agregar fácilmente más adelante
+    // con archivos de audio locales y expo-audio
   }
 
   async cleanup() {
-    if (this.sound) {
-      await this.sound.unloadAsync();
-      this.sound = null;
-    }
+    // No hay recursos para limpiar actualmente
   }
 }
 
