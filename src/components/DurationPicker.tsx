@@ -24,7 +24,7 @@ interface DurationPickerProps {
 const ITEM_HEIGHT = 50;
 const VISIBLE_ITEMS = 5;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
-const REPEAT_COUNT = 500; // Suficiente para scroll largo y sensación de infinito
+const REPEAT_COUNT = 10; // Balance entre scroll largo y performance
 
 export function DurationPicker({
   visible,
@@ -102,7 +102,27 @@ export function DurationPicker({
     setter(value);
   };
 
-  const handleMomentumScrollEnd = () => {
+  const handleMomentumScrollEnd = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+    ref: React.RefObject<ScrollView>,
+    selectedValue: number,
+    maxValue: number
+  ) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const currentIndex = Math.round(offsetY / ITEM_HEIGHT);
+    const totalItems = REPEAT_COUNT * maxValue;
+
+    // Reposicionar si estamos cerca de los límites (primeras o últimas 2 repeticiones)
+    const threshold = maxValue * 2;
+
+    if (currentIndex < threshold || currentIndex > totalItems - threshold) {
+      const middleIndex = getMiddleIndex(selectedValue, maxValue);
+      ref.current?.scrollTo({
+        y: middleIndex * ITEM_HEIGHT,
+        animated: false,
+      });
+    }
+
     // Haptic feedback suave cuando termina el scroll
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
@@ -142,7 +162,7 @@ export function DurationPicker({
           decelerationRate="fast"
           onScroll={(e) => handleScroll(e, setter, maxValue, type)}
           scrollEventThrottle={16}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
+          onMomentumScrollEnd={(e) => handleMomentumScrollEnd(e, scrollRef, selectedValue, maxValue)}
           contentContainerStyle={{
             paddingVertical: ITEM_HEIGHT * 2,
           }}
