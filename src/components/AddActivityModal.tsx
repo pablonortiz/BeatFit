@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
@@ -118,7 +120,10 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>Agregar Actividad</Text>
@@ -346,7 +351,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
           visible={showIconPicker}
           onClose={() => setShowIconPicker(false)}
         />
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -153,7 +153,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     setHasUnsavedChanges(hasName || hasActivities);
   }, [routineName, blocks]);
 
-  // Manejar navegación hacia atrás
+  // Manejar navegación hacia atrás (botón de header)
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (!hasUnsavedChanges) {
@@ -169,7 +169,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
         'Descartar cambios',
         '¿Estás seguro que deseas salir? Los cambios no guardados se perderán.',
         [
-          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Cancelar', style: 'cancel', onPress: () => null },
           {
             text: 'Descartar',
             style: 'destructive',
@@ -178,12 +178,44 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
               navigation.dispatch(e.data.action);
             },
           },
-        ]
+        ],
+        { cancelable: false }
       );
     });
 
     return unsubscribe;
   }, [navigation, hasUnsavedChanges]);
+
+  // Manejar botón físico de Android
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!hasUnsavedChanges) {
+        return false; // Permitir comportamiento por defecto
+      }
+
+      // Mostrar alerta de confirmación
+      Alert.alert(
+        'Descartar cambios',
+        '¿Estás seguro que deseas salir? Los cambios no guardados se perderán.',
+        [
+          { text: 'Cancelar', style: 'cancel', onPress: () => null },
+          {
+            text: 'Descartar',
+            style: 'destructive',
+            onPress: () => {
+              setHasUnsavedChanges(false);
+              navigation.goBack();
+            },
+          },
+        ],
+        { cancelable: false }
+      );
+
+      return true; // Prevenir comportamiento por defecto
+    });
+
+    return () => backHandler.remove();
+  }, [hasUnsavedChanges, navigation]);
 
   const renderActivity = (activity: Activity, blockId: string) => {
     return (
@@ -280,7 +312,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 160 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.nameSection}>
@@ -305,7 +337,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
         />
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
         <Button
           title="Guardar Rutina"
           onPress={handleSaveRoutine}

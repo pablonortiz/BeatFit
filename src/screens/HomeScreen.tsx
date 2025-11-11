@@ -31,7 +31,7 @@ export default function HomeScreen({ navigation }: Props) {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + theme.spacing.lg }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.modeCard}>
@@ -146,7 +146,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   content: {
-    flex: 1,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.lg,
   },
