@@ -71,6 +71,24 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('WorkoutHistory')}
+          >
+            <Ionicons name="calendar" size={32} color={theme.colors.accent} />
+            <Text style={styles.actionText}>Historial</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('Stats')}
+          >
+            <Ionicons name="stats-chart" size={32} color={theme.colors.primary} />
+            <Text style={styles.actionText}>Estadísticas</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.actionCard, !isUsingRemoteStorage && styles.actionCardDisabled]}
             disabled={!isUsingRemoteStorage}
           >

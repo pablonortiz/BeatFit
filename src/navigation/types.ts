@@ -7,4 +7,6 @@ export type RootStackParamList = {
   EditRoutine: { routine: Routine };
   ExecuteRoutine: { routine: Routine; mode: 'full' | 'dynamic' };
   ExerciseManager: undefined;
+  WorkoutHistory: undefined;
+  Stats: undefined;
 };

@@ -4,11 +4,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import { theme } from '../theme';
 
-// Screens - las crearemos a continuación
+// Screens
 import HomeScreen from '../screens/HomeScreen';
 import RoutinesListScreen from '../screens/RoutinesListScreen';
 import CreateRoutineScreen from '../screens/CreateRoutineScreen';
 import ExecuteRoutineScreen from '../screens/ExecuteRoutineScreen';
+import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
+import StatsScreen from '../screens/StatsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -50,6 +52,16 @@ export function AppNavigator() {
           name="ExecuteRoutine"
           component={ExecuteRoutineScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="WorkoutHistory"
+          component={WorkoutHistoryScreen}
+          options={{ title: 'Historial' }}
+        />
+        <Stack.Screen
+          name="Stats"
+          component={StatsScreen}
+          options={{ title: 'Estadísticas' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -74,8 +74,46 @@ export interface RoutineExecutionState {
 // Modo de creación de rutina
 export type RoutineMode = 'full' | 'dynamic'; // 'full' = armar completa, 'dynamic' = ejercicio por ejercicio
 
+// Entrenamiento completado (historial)
+export interface WorkoutSession {
+  id: string;
+  routineId: string;
+  routineName: string;
+  startedAt: number;
+  completedAt: number;
+  duration: number; // Duración total en segundos
+  totalActivities: number;
+  completedActivities: number;
+  blocks: Block[]; // Copia de los bloques al momento de hacer el entrenamiento
+  syncedToCloud?: boolean;
+}
+
+// Estadísticas agregadas
+export interface WorkoutStats {
+  totalWorkouts: number;
+  totalTime: number; // Tiempo total en segundos
+  totalActivities: number;
+  averageWorkoutDuration: number;
+  favoriteRoutine?: {
+    routineId: string;
+    routineName: string;
+    count: number;
+  };
+  mostUsedExercises: {
+    name: string;
+    icon: ExerciseIcon;
+    count: number;
+  }[];
+  workoutsByWeek: number;
+  workoutsByMonth: number;
+  currentStreak: number; // Días consecutivos con entrenamientos
+  longestStreak: number;
+  lastWorkoutDate?: number;
+}
+
 // Estado global de la app
 export interface AppState {
   exercises: ExerciseTemplate[];
   routines: Routine[];
+  workoutHistory: WorkoutSession[];
 }

@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ExerciseTemplate, Routine, AppState } from '../types';
+import { ExerciseTemplate, Routine, AppState, WorkoutSession } from '../types';
 
 // Interfaz para el servicio de almacenamiento
 // Esto permite cambiar fácilmente de AsyncStorage a una base de datos remota
@@ -15,6 +15,12 @@ export interface StorageService {
   deleteRoutine(id: string): Promise<void>;
   updateRoutine(routine: Routine): Promise<void>;
 
+  // Historial de entrenamientos
+  getWorkoutHistory(): Promise<WorkoutSession[]>;
+  saveWorkoutSession(session: WorkoutSession): Promise<void>;
+  deleteWorkoutSession(id: string): Promise<void>;
+  clearWorkoutHistory(): Promise<void>;
+
   // Estado completo
   getAppState(): Promise<AppState>;
   clearAll(): Promise<void>;
@@ -24,6 +30,7 @@ export interface StorageService {
 class LocalStorageService implements StorageService {
   private EXERCISES_KEY = '@BeatFit:exercises';
   private ROUTINES_KEY = '@BeatFit:routines';
+  private WORKOUT_HISTORY_KEY = '@BeatFit:workout_history';
 
   async getExercises(): Promise<ExerciseTemplate[]> {
     try {
@@ -107,17 +114,65 @@ class LocalStorageService implements StorageService {
     }
   }
 
+  async getWorkoutHistory(): Promise<WorkoutSession[]> {
+    try {
+      const data = await AsyncStorage.getItem(this.WORKOUT_HISTORY_KEY);
+      const history = data ? JSON.parse(data) : [];
+      // Ordenar por fecha (más recientes primero)
+      return history.sort((a: WorkoutSession, b: WorkoutSession) => b.completedAt - a.completedAt);
+    } catch (error) {
+      console.error('Error loading workout history:', error);
+      return [];
+    }
+  }
+
+  async saveWorkoutSession(session: WorkoutSession): Promise<void> {
+    try {
+      const history = await this.getWorkoutHistory();
+      history.push(session);
+      await AsyncStorage.setItem(this.WORKOUT_HISTORY_KEY, JSON.stringify(history));
+    } catch (error) {
+      console.error('Error saving workout session:', error);
+      throw error;
+    }
+  }
+
+  async deleteWorkoutSession(id: string): Promise<void> {
+    try {
+      const history = await this.getWorkoutHistory();
+      const filtered = history.filter(s => s.id !== id);
+      await AsyncStorage.setItem(this.WORKOUT_HISTORY_KEY, JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Error deleting workout session:', error);
+      throw error;
+    }
+  }
+
+  async clearWorkoutHistory(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.WORKOUT_HISTORY_KEY);
+    } catch (error) {
+      console.error('Error clearing workout history:', error);
+      throw error;
+    }
+  }
+
   async getAppState(): Promise<AppState> {
-    const [exercises, routines] = await Promise.all([
+    const [exercises, routines, workoutHistory] = await Promise.all([
       this.getExercises(),
       this.getRoutines(),
+      this.getWorkoutHistory(),
     ]);
 
-    return { exercises, routines };
+    return { exercises, routines, workoutHistory };
   }
 
   async clearAll(): Promise<void> {
-    await AsyncStorage.multiRemove([this.EXERCISES_KEY, this.ROUTINES_KEY]);
+    await AsyncStorage.multiRemove([
+      this.EXERCISES_KEY,
+      this.ROUTINES_KEY,
+      this.WORKOUT_HISTORY_KEY,
+    ]);
   }
 }
 

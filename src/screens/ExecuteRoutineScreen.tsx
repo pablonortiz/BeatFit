@@ -13,15 +13,17 @@ import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 import { Button } from '../components';
 import { Ionicons } from '@expo/vector-icons';
-import { Activity, Block } from '../types';
-import { formatTime } from '../utils/helpers';
+import { Activity, Block, WorkoutSession } from '../types';
+import { formatTime, generateId } from '../utils/helpers';
 import { notificationService } from '../services/notification';
 import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
+import { useWorkoutHistory } from '../hooks/useStorage';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExecuteRoutine'>;
 
 export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const { routine } = route.params;
+  const { saveWorkout } = useWorkoutHistory();
 
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [currentBlockRep, setCurrentBlockRep] = useState(0);
@@ -29,6 +31,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [startTime] = useState(Date.now());
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -68,6 +71,29 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     };
   }, []);
 
+  // Función para guardar el entrenamiento completado
+  const saveCompletedWorkout = useCallback(async () => {
+    const endTime = Date.now();
+    const totalActivities = routine.blocks.reduce(
+      (sum, block) => sum + block.activities.length * block.repetitions,
+      0
+    );
+
+    const workoutSession: WorkoutSession = {
+      id: generateId(),
+      routineId: routine.id,
+      routineName: routine.name,
+      startedAt: startTime,
+      completedAt: endTime,
+      duration: Math.round((endTime - startTime) / 1000), // en segundos
+      totalActivities,
+      completedActivities: totalActivities,
+      blocks: routine.blocks,
+    };
+
+    await saveWorkout(workoutSession);
+  }, [routine, startTime, saveWorkout]);
+
   // Función para avanzar a la siguiente actividad
   const goToNextActivity = useCallback(async () => {
     // Reproducir notificación
@@ -76,6 +102,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     if (isLastActivityInBlock && isLastRepOfBlock && isLastBlock) {
       // Rutina completa
       setIsComplete(true);
+
+      // Guardar en el historial
+      await saveCompletedWorkout();
+
       Alert.alert(
         '¡Rutina Completada!',
         'Has terminado tu entrenamiento',
