@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
 import * as Speech from 'expo-speech';
@@ -41,24 +41,86 @@ export function useVoiceRecognition(
   const [lastTranscript, setLastTranscript] = useState('');
   const [isAvailable, setIsAvailable] = useState(false);
 
-  // Verificar disponibilidad de Voice al montar
+  const isListeningRef = useRef(false);
+  const onDoneRef = useRef(onDone);
+  const keywordsRef = useRef(keywords);
+
+  // Actualizar refs cuando cambien
+  useEffect(() => {
+    onDoneRef.current = onDone;
+    keywordsRef.current = keywords;
+  }, [onDone, keywords]);
+
+  // Configurar listeners UNA SOLA VEZ al montar
+  useEffect(() => {
+    console.log('[Voice] Configurando listeners');
+
+    Voice.onSpeechStart = () => {
+      console.log('[Voice] onSpeechStart');
+    };
+
+    Voice.onSpeechResults = (e) => {
+      console.log('[Voice] onSpeechResults:', e.value);
+      if (e.value && e.value.length > 0) {
+        const text = e.value[0].toLowerCase();
+        setLastTranscript(text);
+
+        // Verificar si alguna palabra clave fue detectada
+        const matched = keywordsRef.current.some(keyword =>
+          text.includes(keyword.toLowerCase())
+        );
+
+        console.log('[Voice] Texto detectado:', text, 'Matched:', matched);
+
+        if (matched) {
+          console.log('[Voice] Palabra clave detectada! Llamando onDone');
+          onDoneRef.current();
+        }
+      }
+    };
+
+    Voice.onSpeechError = (e) => {
+      console.log('[Voice] onSpeechError:', e);
+      setIsListening(false);
+      isListeningRef.current = false;
+    };
+
+    Voice.onSpeechEnd = () => {
+      console.log('[Voice] onSpeechEnd, isListening:', isListeningRef.current);
+      // Reiniciar automáticamente si todavía estamos en modo listening
+      if (isListeningRef.current) {
+        setTimeout(() => {
+          Voice.start('es-ES').catch((err) => {
+            console.log('[Voice] Error reiniciando:', err);
+          });
+        }, 100);
+      }
+    };
+
+    return () => {
+      console.log('[Voice] Cleanup - removiendo listeners');
+      Voice.destroy().then(Voice.removeAllListeners).catch(() => {});
+    };
+  }, []); // Solo al montar
+
+  // Verificar disponibilidad
   useEffect(() => {
     const checkAvailability = async () => {
       try {
-        // Pedir permiso primero
+        console.log('[Voice] Pidiendo permiso de micrófono');
         const hasPermission = await requestMicrophonePermission();
+
         if (!hasPermission) {
+          console.log('[Voice] Permiso denegado');
           setIsAvailable(false);
           return;
         }
 
-        // Verificar disponibilidad
-        const available = await Voice.isAvailable();
-        setIsAvailable(available || true); // Asumir disponible si no hay error
-      } catch (error) {
-        // En builds nativos, Voice.isAvailable() puede fallar pero Voice funciona
-        // Así que asumimos que está disponible si tenemos permiso
+        console.log('[Voice] Permiso otorgado, Voice disponible');
         setIsAvailable(true);
+      } catch (error) {
+        console.log('[Voice] Error verificando disponibilidad:', error);
+        setIsAvailable(true); // Asumir disponible en builds nativos
       }
     };
     checkAvailability();
@@ -66,72 +128,34 @@ export function useVoiceRecognition(
 
   const startListening = useCallback(async () => {
     if (!isAvailable) {
-      // Voice no disponible, silenciar
+      console.log('[Voice] No disponible, no se puede iniciar');
       return;
     }
 
     try {
-      setIsListening(true);
+      console.log('[Voice] Iniciando reconocimiento');
       await Voice.start('es-ES');
+      setIsListening(true);
+      isListeningRef.current = true;
+      console.log('[Voice] Reconocimiento iniciado correctamente');
     } catch (error) {
-      // Silenciar error si Voice no está disponible
+      console.log('[Voice] Error al iniciar:', error);
       setIsListening(false);
+      isListeningRef.current = false;
     }
   }, [isAvailable]);
 
   const stopListening = useCallback(async () => {
-    if (!isAvailable) {
-      setIsListening(false);
-      return;
-    }
-
     try {
+      console.log('[Voice] Deteniendo reconocimiento');
+      isListeningRef.current = false;
       setIsListening(false);
       await Voice.stop();
       await Voice.destroy();
     } catch (error) {
-      // Silenciar error
+      console.log('[Voice] Error al detener:', error);
     }
-  }, [isAvailable]);
-
-  useEffect(() => {
-    if (!isAvailable) {
-      return;
-    }
-
-    // Configurar listeners para el reconocimiento de voz
-    Voice.onSpeechResults = (e) => {
-      if (e.value && e.value.length > 0) {
-        const text = e.value[0].toLowerCase();
-        setLastTranscript(text);
-
-        // Verificar si alguna palabra clave fue detectada
-        if (keywords.some(keyword => text.includes(keyword.toLowerCase()))) {
-          onDone();
-          stopListening();
-        }
-      }
-    };
-
-    Voice.onSpeechError = (e) => {
-      setIsListening(false);
-    };
-
-    Voice.onSpeechEnd = () => {
-      // Reiniciar automáticamente si todavía estamos en modo listening
-      if (isListening) {
-        startListening();
-      }
-    };
-
-    return () => {
-      // Cleanup
-      if (isAvailable) {
-        stopListening();
-        Voice.destroy().then(Voice.removeAllListeners).catch(() => {});
-      }
-    };
-  }, [onDone, keywords, stopListening, isListening, startListening, isAvailable]);
+  }, []);
 
   return {
     isListening,
