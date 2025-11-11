@@ -8,6 +8,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -22,6 +23,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutHistory'>;
 export default function WorkoutHistoryScreen({ navigation }: Props) {
   const { history, loading, deleteWorkout, refresh } = useWorkoutHistory();
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -141,7 +143,7 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
         data={history}
         renderItem={renderWorkoutItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + theme.spacing.lg }]}
         ListHeaderComponent={renderListHeader}
         refreshControl={
           <RefreshControl

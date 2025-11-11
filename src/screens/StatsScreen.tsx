@@ -6,6 +6,7 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -19,6 +20,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Stats'>;
 export default function StatsScreen({ navigation }: Props) {
   const { stats, loading } = useWorkoutStats();
   const [refreshing, setRefreshing] = React.useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -45,7 +47,7 @@ export default function StatsScreen({ navigation }: Props) {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + theme.spacing.xxl }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

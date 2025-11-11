@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  BackHandler,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -23,6 +25,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CreateRoutine'>;
 export default function CreateRoutineScreen({ navigation, route }: Props) {
   const { mode } = route.params;
   const { saveRoutine } = useRoutines();
+  const insets = useSafeAreaInsets();
 
   const [routineName, setRoutineName] = useState('');
   const [blocks, setBlocks] = useState<Block[]>([
@@ -35,6 +38,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   ]);
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const handleAddBlock = () => {
     const newBlock: Block = {
@@ -133,6 +137,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     };
 
     await saveRoutine(routine);
+    setHasUnsavedChanges(false); // Marcar como guardado
     Alert.alert('Éxito', 'Rutina guardada correctamente', [
       {
         text: 'OK',
@@ -140,6 +145,45 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       },
     ]);
   };
+
+  // Detectar si hay cambios
+  useEffect(() => {
+    const hasName = routineName.trim().length > 0;
+    const hasActivities = blocks.some(block => block.activities.length > 0);
+    setHasUnsavedChanges(hasName || hasActivities);
+  }, [routineName, blocks]);
+
+  // Manejar navegación hacia atrás
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasUnsavedChanges) {
+        // Si no hay cambios, dejar ir
+        return;
+      }
+
+      // Prevenir la acción por defecto
+      e.preventDefault();
+
+      // Mostrar alerta de confirmación
+      Alert.alert(
+        'Descartar cambios',
+        '¿Estás seguro que deseas salir? Los cambios no guardados se perderán.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Descartar',
+            style: 'destructive',
+            onPress: () => {
+              setHasUnsavedChanges(false);
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, hasUnsavedChanges]);
 
   const renderActivity = (activity: Activity, blockId: string) => {
     return (
@@ -236,7 +280,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.nameSection}>
@@ -288,7 +332,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: theme.spacing.lg,
-    paddingBottom: 100,
   },
   nameSection: {
     marginBottom: theme.spacing.lg,
@@ -323,19 +366,19 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   repetitionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     marginBottom: theme.spacing.lg,
+    gap: theme.spacing.sm,
   },
   counter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   counterText: {
     ...theme.typography.h3,
-    minWidth: 40,
+    minWidth: 32,
     textAlign: 'center',
   },
   activitiesList: {

@@ -8,6 +8,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -22,6 +23,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'RoutinesList'>;
 export default function RoutinesListScreen({ navigation }: Props) {
   const { routines, loading, deleteRoutine, refresh } = useRoutines();
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -121,7 +123,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
         data={routines}
         renderItem={renderRoutineItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + theme.spacing.lg }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

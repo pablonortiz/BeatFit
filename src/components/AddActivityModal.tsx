@@ -34,12 +34,13 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
   const [reps, setReps] = useState('10');
   const [selectedIcon, setSelectedIcon] = useState<ExerciseIcon>('fitness');
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedExerciseTemplate, setSelectedExerciseTemplate] = useState<ExerciseTemplate | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const filteredExercises = useMemo(() => {
-    return searchExercises(exercises, searchQuery);
-  }, [exercises, searchQuery]);
+    if (!name.trim() || activityType === 'rest') return [];
+    return searchExercises(exercises, name);
+  }, [exercises, name, activityType]);
 
   const resetForm = () => {
     setActivityType('exercise');
@@ -48,8 +49,8 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
     setDuration('30');
     setReps('10');
     setSelectedIcon('fitness');
-    setSearchQuery('');
     setSelectedExerciseTemplate(null);
+    setShowSuggestions(false);
   };
 
   const handleClose = () => {
@@ -61,6 +62,13 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
     setSelectedExerciseTemplate(template);
     setName(template.name);
     setSelectedIcon(template.icon);
+    setShowSuggestions(false);
+  };
+
+  const handleNameChange = (text: string) => {
+    setName(text);
+    setSelectedExerciseTemplate(null);
+    setShowSuggestions(text.trim().length > 0);
   };
 
   const handleAdd = async () => {
@@ -178,40 +186,11 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
               </View>
             </View>
 
-            {/* Buscador de ejercicios (solo para ejercicios) */}
-            {activityType === 'exercise' && exercises.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Buscar ejercicio guardado</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Buscar..."
-                  placeholderTextColor={theme.colors.textTertiary}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                {searchQuery.length > 0 && filteredExercises.length > 0 && (
-                  <View style={styles.searchResults}>
-                    {filteredExercises.map((exercise) => (
-                      <TouchableOpacity
-                        key={exercise.id}
-                        style={styles.exerciseItem}
-                        onPress={() => handleSelectTemplate(exercise)}
-                      >
-                        <Ionicons name={exercise.icon as any} size={24} color={theme.colors.primary} />
-                        <Text style={styles.exerciseItemText}>{exercise.name}</Text>
-                        {selectedExerciseTemplate?.id === exercise.id && (
-                          <Ionicons name="checkmark-circle" size={24} color={theme.colors.accent} />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
-
-            {/* Nombre e icono */}
+            {/* Nombre e icono con sugerencias */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Nombre</Text>
+              <Text style={styles.sectionTitle}>
+                {activityType === 'rest' ? 'Nombre' : 'Nombre del ejercicio'}
+              </Text>
               <View style={styles.nameRow}>
                 <TouchableOpacity
                   style={styles.iconButton}
@@ -222,13 +201,43 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                 </TouchableOpacity>
                 <TextInput
                   style={styles.nameInput}
-                  placeholder="Nombre del ejercicio"
+                  placeholder={activityType === 'rest' ? 'Descanso' : 'Escribe el nombre...'}
                   placeholderTextColor={theme.colors.textTertiary}
                   value={name}
-                  onChangeText={setName}
+                  onChangeText={handleNameChange}
                   editable={activityType !== 'rest'}
                 />
               </View>
+
+              {/* Sugerencias de ejercicios existentes */}
+              {activityType === 'exercise' && showSuggestions && filteredExercises.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  <Text style={styles.suggestionsTitle}>Ejercicios guardados:</Text>
+                  <View style={styles.searchResults}>
+                    {filteredExercises.slice(0, 5).map((exercise) => (
+                      <TouchableOpacity
+                        key={exercise.id}
+                        style={styles.exerciseItem}
+                        onPress={() => handleSelectTemplate(exercise)}
+                      >
+                        <Ionicons name={exercise.icon as any} size={24} color={theme.colors.primary} />
+                        <Text style={styles.exerciseItemText}>{exercise.name}</Text>
+                        <Ionicons name="arrow-forward" size={20} color={theme.colors.textTertiary} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Indicador si se está usando un ejercicio existente */}
+              {selectedExerciseTemplate && (
+                <View style={styles.templateIndicator}>
+                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
+                  <Text style={styles.templateIndicatorText}>
+                    Usando ejercicio guardado
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Tipo de ejercicio (solo para ejercicios) */}
@@ -402,12 +411,13 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontWeight: '600',
   },
-  searchInput: {
-    backgroundColor: theme.colors.backgroundCardLight,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    ...theme.typography.body,
-    color: theme.colors.textPrimary,
+  suggestionsContainer: {
+    marginTop: theme.spacing.md,
+  },
+  suggestionsTitle: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    marginBottom: theme.spacing.sm,
   },
   searchResults: {
     marginTop: theme.spacing.sm,
@@ -425,6 +435,17 @@ const styles = StyleSheet.create({
   exerciseItemText: {
     ...theme.typography.body,
     flex: 1,
+  },
+  templateIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+  },
+  templateIndicatorText: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
   },
   nameRow: {
     flexDirection: 'row',

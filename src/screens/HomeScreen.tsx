@@ -3,10 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
+  ScrollView,
   TouchableOpacity,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
@@ -17,6 +18,8 @@ import { isUsingRemoteStorage } from '../services/storage';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
@@ -26,7 +29,11 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={styles.subtitle}>Tu entrenador personal</Text>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + theme.spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Card style={styles.modeCard}>
           <View style={styles.iconContainer}>
             <Ionicons name="list" size={48} color={theme.colors.primary} />
@@ -110,7 +117,7 @@ export default function HomeScreen({ navigation }: Props) {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -119,6 +126,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   header: {
     paddingHorizontal: theme.spacing.xl,
