@@ -17,7 +17,9 @@
       "bundleIdentifier": "com.beatfit.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "BeatFit necesita acceso al micrófono para reconocimiento de voz durante los ejercicios.",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -36,6 +38,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "64ed0cdc-f915-44a0-99f0-7e3f8dcfbc60"
+      }
+    }
   }
 }
