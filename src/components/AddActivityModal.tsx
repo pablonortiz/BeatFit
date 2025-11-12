@@ -40,6 +40,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
   const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [selectedExerciseTemplate, setSelectedExerciseTemplate] = useState<ExerciseTemplate | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [inputLayout, setInputLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   const filteredExercises = useMemo(() => {
     if (!name.trim() || activityType === 'rest') return [];
@@ -224,39 +225,27 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                 >
                   <Ionicons name={selectedIcon as any} size={32} color={theme.colors.primary} />
                 </TouchableOpacity>
-                <TextInput
-                  style={styles.nameInput}
-                  placeholder={activityType === 'rest' ? 'Descanso' : 'Escribe el nombre...'}
-                  placeholderTextColor={theme.colors.textTertiary}
-                  value={name}
-                  onChangeText={handleNameChange}
-                  editable={activityType !== 'rest'}
-                />
+                <View
+                  onLayout={(event) => {
+                    const layout = event.nativeEvent.layout;
+                    event.currentTarget.measure((x, y, width, height, pageX, pageY) => {
+                      setInputLayout({ x: pageX, y: pageY, width, height });
+                    });
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <TextInput
+                    style={styles.nameInput}
+                    placeholder={activityType === 'rest' ? 'Descanso' : 'Escribe el nombre...'}
+                    placeholderTextColor={theme.colors.textTertiary}
+                    value={name}
+                    onChangeText={handleNameChange}
+                    editable={activityType !== 'rest'}
+                  />
+                </View>
               </View>
 
-              {/* Sugerencias de ejercicios existentes */}
-              {activityType === 'exercise' && showSuggestions && filteredExercises.length > 0 && (
-                <View style={styles.suggestionsContainer}>
-                  <Text style={styles.suggestionsTitle}>Ejercicios guardados:</Text>
-                  <ScrollView
-                    style={styles.searchResults}
-                    nestedScrollEnabled={true}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    {filteredExercises.slice(0, 5).map((exercise) => (
-                      <TouchableOpacity
-                        key={exercise.id}
-                        style={styles.exerciseItem}
-                        onPress={() => handleSelectTemplate(exercise)}
-                      >
-                        <Ionicons name={exercise.icon as any} size={24} color={theme.colors.primary} />
-                        <Text style={styles.exerciseItemText}>{exercise.name}</Text>
-                        <Ionicons name="arrow-forward" size={20} color={theme.colors.textTertiary} />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+              {/* Sugerencias eliminadas de aquí - ahora son absolutas */}
 
               {/* Indicador si se está usando un ejercicio existente */}
               {selectedExerciseTemplate && (
@@ -371,6 +360,44 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
           </View>
         </View>
 
+        {/* Dropdown absoluto de sugerencias */}
+        {activityType === 'exercise' && showSuggestions && filteredExercises.length > 0 && inputLayout && (
+          <View
+            style={[
+              styles.suggestionsDropdown,
+              {
+                bottom: inputLayout.height + 8,
+                left: inputLayout.x,
+                width: inputLayout.width,
+              },
+            ]}
+          >
+            <View style={styles.suggestionsHeader}>
+              <Text style={styles.suggestionsTitle}>Ejercicios guardados</Text>
+              <TouchableOpacity onPress={() => setShowSuggestions(false)}>
+                <Ionicons name="close-circle" size={20} color={theme.colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              style={styles.suggestionsList}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {filteredExercises.slice(0, 5).map((exercise) => (
+                <TouchableOpacity
+                  key={exercise.id}
+                  style={styles.suggestionItem}
+                  onPress={() => handleSelectTemplate(exercise)}
+                >
+                  <Ionicons name={exercise.icon as any} size={24} color={theme.colors.primary} />
+                  <Text style={styles.suggestionItemText}>{exercise.name}</Text>
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textTertiary} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <IconPicker
           selectedIcon={selectedIcon}
           onSelect={setSelectedIcon}
@@ -448,28 +475,49 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     fontWeight: '600',
   },
-  suggestionsContainer: {
-    marginTop: theme.spacing.md,
+  // Dropdown absoluto de sugerencias
+  suggestionsDropdown: {
+    position: 'absolute',
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.borderRadius.lg,
+    maxHeight: 250,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+    zIndex: 1000,
+  },
+  suggestionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   suggestionsTitle: {
-    ...theme.typography.caption,
-    color: theme.colors.textTertiary,
-    marginBottom: theme.spacing.sm,
+    ...theme.typography.bodySmallBold,
+    color: theme.colors.textSecondary,
   },
-  searchResults: {
-    marginTop: theme.spacing.sm,
+  suggestionsList: {
     maxHeight: 200,
   },
-  exerciseItem: {
+  suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
     padding: theme.spacing.md,
-    backgroundColor: theme.colors.backgroundCardLight,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  exerciseItemText: {
+  suggestionItemText: {
     ...theme.typography.body,
     flex: 1,
   },
