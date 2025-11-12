@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -33,16 +34,26 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const [isComplete, setIsComplete] = useState(false);
   const [startTime] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [showSkipModal, setShowSkipModal] = useState(false);
+  const [pendingActivities, setPendingActivities] = useState<Activity[]>([]);
+  const [isProcessingPending, setIsProcessingPending] = useState(false);
+  const [currentPendingIndex, setCurrentPendingIndex] = useState(0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const currentBlock = routine.blocks[currentBlockIndex];
-  const currentActivity = currentBlock?.activities[currentActivityIndex];
+
+  // Determinar actividad actual (puede ser de pendientes o del bloque)
+  const currentActivity = isProcessingPending
+    ? pendingActivities[currentPendingIndex]
+    : currentBlock?.activities[currentActivityIndex];
+
   const isLastActivityInBlock = currentActivityIndex === currentBlock?.activities.length - 1;
   const isLastRepOfBlock = currentBlockRep === currentBlock?.repetitions - 1;
   const isLastBlock = currentBlockIndex === routine.blocks.length - 1;
+  const isLastPendingActivity = currentPendingIndex === pendingActivities.length - 1;
 
   // Calcular progreso total
   const calculateProgress = useCallback(() => {
@@ -122,7 +133,41 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     // Reproducir notificación
     await notificationService.playNotification();
 
+    // Si estamos procesando pendientes
+    if (isProcessingPending) {
+      if (isLastPendingActivity) {
+        // Terminamos de procesar todos los pendientes
+        setPendingActivities([]);
+        setIsProcessingPending(false);
+        setCurrentPendingIndex(0);
+
+        // Ahora sí avanzar al siguiente bloque o repetición
+        if (isLastRepOfBlock) {
+          // Siguiente bloque
+          setCurrentBlockIndex(currentBlockIndex + 1);
+          setCurrentBlockRep(0);
+          setCurrentActivityIndex(0);
+        } else {
+          // Siguiente repetición del bloque
+          setCurrentBlockRep(currentBlockRep + 1);
+          setCurrentActivityIndex(0);
+        }
+      } else {
+        // Siguiente actividad pendiente
+        setCurrentPendingIndex(currentPendingIndex + 1);
+      }
+      return;
+    }
+
+    // Lógica normal (no pendientes)
     if (isLastActivityInBlock && isLastRepOfBlock && isLastBlock) {
+      // Verificar si hay pendientes antes de completar
+      if (pendingActivities.length > 0) {
+        setIsProcessingPending(true);
+        setCurrentPendingIndex(0);
+        return;
+      }
+
       // Rutina completa
       setIsComplete(true);
 
@@ -143,6 +188,13 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     }
 
     if (isLastActivityInBlock) {
+      // Verificar si hay pendientes antes de cambiar de bloque/repetición
+      if (pendingActivities.length > 0) {
+        setIsProcessingPending(true);
+        setCurrentPendingIndex(0);
+        return;
+      }
+
       if (isLastRepOfBlock) {
         // Siguiente bloque
         setCurrentBlockIndex(currentBlockIndex + 1);
@@ -164,7 +216,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     isLastActivityInBlock,
     isLastRepOfBlock,
     isLastBlock,
+    isProcessingPending,
+    currentPendingIndex,
+    isLastPendingActivity,
+    pendingActivities,
     navigation,
+    saveCompletedWorkout,
   ]);
 
   // Reconocimiento de voz para ejercicios por repeticiones
@@ -254,6 +311,27 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     );
   };
 
+  const handleSkipPress = () => {
+    setShowSkipModal(true);
+  };
+
+  const handleSkipDefinitely = async () => {
+    setShowSkipModal(false);
+    await goToNextActivity();
+  };
+
+  const handleSkipPending = async () => {
+    setShowSkipModal(false);
+    // Agregar actividad actual a la cola de pendientes
+    if (currentActivity) {
+      setPendingActivities((prev) => [...prev, currentActivity]);
+    }
+    await goToNextActivity();
+  };
+
+  // Verificar si se puede dejar como pendiente (no último ejercicio de última rep del bloque)
+  const canLeavePending = !(isLastActivityInBlock && isLastRepOfBlock);
+
   if (!currentActivity) {
     return null;
   }
@@ -287,14 +365,26 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         <TouchableOpacity onPress={handleStop}>
           <Ionicons name="close" size={32} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.routineName}>{routine.name}</Text>
-        <TouchableOpacity onPress={handlePause}>
-          <Ionicons
-            name={isPaused ? 'play' : 'pause'}
-            size={32}
-            color={theme.colors.textPrimary}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.routineName}>{routine.name}</Text>
+          {pendingActivities.length > 0 && (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingBadgeText}>{pendingActivities.length} pendiente{pendingActivities.length !== 1 ? 's' : ''}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={handleSkipPress} style={styles.skipButton}>
+            <Ionicons name="play-skip-forward" size={24} color={theme.colors.warning} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handlePause}>
+            <Ionicons
+              name={isPaused ? 'play' : 'pause'}
+              size={32}
+              color={theme.colors.textPrimary}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Progress Bar */}
@@ -317,6 +407,18 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           </Text>
         </View>
       </View>
+
+      {/* Pending Activities Indicator */}
+      {isProcessingPending && (
+        <View style={styles.pendingIndicatorContainer}>
+          <View style={styles.pendingIndicator}>
+            <Ionicons name="return-down-back" size={20} color={theme.colors.warning} />
+            <Text style={styles.pendingIndicatorText}>
+              Ejercicio Pendiente ({currentPendingIndex + 1}/{pendingActivities.length})
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* Main Content */}
       <View style={styles.content}>
@@ -391,23 +493,57 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           let label = '';
           let nextActivityName = '';
 
-          if (!isLastActivityInBlock) {
-            // Siguiente actividad en el mismo bloque
-            label = 'Siguiente:';
-            nextActivityName = currentBlock.activities[currentActivityIndex + 1]?.name || '';
-          } else if (isLastActivityInBlock && !isLastRepOfBlock) {
-            // Repetir el bloque
-            label = 'Repetir bloque:';
-            nextActivityName = currentBlock.activities[0]?.name || '';
-          } else if (isLastActivityInBlock && isLastRepOfBlock && !isLastBlock) {
-            // Próximo bloque
-            label = 'Próximo bloque:';
-            const nextBlock = routine.blocks[currentBlockIndex + 1];
-            nextActivityName = nextBlock?.activities[0]?.name || '';
+          if (isProcessingPending) {
+            // Estamos procesando pendientes
+            if (!isLastPendingActivity) {
+              label = 'Siguiente pendiente:';
+              nextActivityName = pendingActivities[currentPendingIndex + 1]?.name || '';
+            } else {
+              // Después de los pendientes, volvemos al flujo normal
+              if (isLastRepOfBlock) {
+                label = 'Próximo bloque:';
+                const nextBlock = routine.blocks[currentBlockIndex + 1];
+                nextActivityName = nextBlock?.activities[0]?.name || '';
+              } else {
+                label = 'Repetir bloque:';
+                nextActivityName = currentBlock.activities[0]?.name || '';
+              }
+            }
           } else {
-            // Última actividad de la rutina
-            label = '¡Última actividad!';
-            nextActivityName = '';
+            // Flujo normal
+            if (!isLastActivityInBlock) {
+              // Siguiente actividad en el mismo bloque
+              label = 'Siguiente:';
+              nextActivityName = currentBlock.activities[currentActivityIndex + 1]?.name || '';
+            } else if (isLastActivityInBlock && !isLastRepOfBlock) {
+              // Repetir el bloque o procesar pendientes
+              if (pendingActivities.length > 0) {
+                label = 'Ejercicios pendientes:';
+                nextActivityName = pendingActivities[0]?.name || '';
+              } else {
+                label = 'Repetir bloque:';
+                nextActivityName = currentBlock.activities[0]?.name || '';
+              }
+            } else if (isLastActivityInBlock && isLastRepOfBlock && !isLastBlock) {
+              // Próximo bloque o procesar pendientes
+              if (pendingActivities.length > 0) {
+                label = 'Ejercicios pendientes:';
+                nextActivityName = pendingActivities[0]?.name || '';
+              } else {
+                label = 'Próximo bloque:';
+                const nextBlock = routine.blocks[currentBlockIndex + 1];
+                nextActivityName = nextBlock?.activities[0]?.name || '';
+              }
+            } else {
+              // Última actividad de la rutina (o pendientes si hay)
+              if (pendingActivities.length > 0) {
+                label = 'Ejercicios pendientes:';
+                nextActivityName = pendingActivities[0]?.name || '';
+              } else {
+                label = '¡Última actividad!';
+                nextActivityName = '';
+              }
+            }
           }
 
           if (!label) return null;
@@ -422,6 +558,52 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           );
         })()}
       </View>
+
+      {/* Skip Modal */}
+      <Modal
+        visible={showSkipModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSkipModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Saltar Ejercicio</Text>
+            <Text style={styles.modalSubtitle}>{currentActivity.name}</Text>
+
+            <View style={styles.modalButtons}>
+              {/* Skip Definitely */}
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSkip]}
+                onPress={handleSkipDefinitely}
+              >
+                <Ionicons name="close-circle" size={48} color={theme.colors.error} />
+                <Text style={styles.modalButtonTitle}>Saltar</Text>
+                <Text style={styles.modalButtonSubtitle}>Definitivamente</Text>
+              </TouchableOpacity>
+
+              {/* Skip Pending (only if allowed) */}
+              {canLeavePending && (
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonPending]}
+                  onPress={handleSkipPending}
+                >
+                  <Ionicons name="time" size={48} color={theme.colors.warning} />
+                  <Text style={styles.modalButtonTitle}>Dejar</Text>
+                  <Text style={styles.modalButtonSubtitle}>Pendiente</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalCancelButton}
+              onPress={() => setShowSkipModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -441,8 +623,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: theme.spacing.md,
+  },
   routineName: {
     ...theme.typography.h4,
+  },
+  pendingBadge: {
+    marginTop: theme.spacing.xs,
+    paddingVertical: 2,
+    paddingHorizontal: theme.spacing.sm,
+    backgroundColor: theme.colors.warning + '30',
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+  },
+  pendingBadgeText: {
+    ...theme.typography.caption,
+    color: theme.colors.warning,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+  },
+  skipButton: {
+    padding: theme.spacing.xs,
   },
   progressContainer: {
     paddingHorizontal: theme.spacing.lg,
@@ -485,6 +695,27 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontSize: 16,
     fontVariant: ['tabular-nums'],
+  },
+  pendingIndicatorContainer: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  pendingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.warning + '20',
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+  },
+  pendingIndicatorText: {
+    ...theme.typography.body,
+    color: theme.colors.warning,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -579,6 +810,73 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.xs,
   },
   nextActivityName: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.textSecondary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    ...theme.typography.h3,
+    textAlign: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  modalSubtitle: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
+  },
+  modalButton: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+  },
+  modalButtonSkip: {
+    backgroundColor: theme.colors.error + '20',
+    borderWidth: 3,
+    borderColor: theme.colors.error,
+  },
+  modalButtonPending: {
+    backgroundColor: theme.colors.warning + '20',
+    borderWidth: 3,
+    borderColor: theme.colors.warning,
+  },
+  modalButtonTitle: {
+    ...theme.typography.h4,
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
+  },
+  modalButtonSubtitle: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  modalCancelButton: {
+    paddingVertical: theme.spacing.md,
+    alignItems: 'center',
+  },
+  modalCancelText: {
     ...theme.typography.bodyBold,
     color: theme.colors.textSecondary,
   },
