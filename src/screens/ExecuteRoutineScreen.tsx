@@ -386,14 +386,41 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         )}
 
         {/* Next Activity Preview */}
-        {!isLastActivityInBlock && (
-          <View style={styles.nextActivity}>
-            <Text style={styles.nextActivityLabel}>Siguiente:</Text>
-            <Text style={styles.nextActivityName}>
-              {currentBlock.activities[currentActivityIndex + 1]?.name}
-            </Text>
-          </View>
-        )}
+        {(() => {
+          // Determinar qué se viene después
+          let label = '';
+          let nextActivityName = '';
+
+          if (!isLastActivityInBlock) {
+            // Siguiente actividad en el mismo bloque
+            label = 'Siguiente:';
+            nextActivityName = currentBlock.activities[currentActivityIndex + 1]?.name || '';
+          } else if (isLastActivityInBlock && !isLastRepOfBlock) {
+            // Repetir el bloque
+            label = 'Repetir bloque:';
+            nextActivityName = currentBlock.activities[0]?.name || '';
+          } else if (isLastActivityInBlock && isLastRepOfBlock && !isLastBlock) {
+            // Próximo bloque
+            label = 'Próximo bloque:';
+            const nextBlock = routine.blocks[currentBlockIndex + 1];
+            nextActivityName = nextBlock?.activities[0]?.name || '';
+          } else {
+            // Última actividad de la rutina
+            label = '¡Última actividad!';
+            nextActivityName = '';
+          }
+
+          if (!label) return null;
+
+          return (
+            <View style={styles.nextActivity}>
+              <Text style={styles.nextActivityLabel}>{label}</Text>
+              {nextActivityName ? (
+                <Text style={styles.nextActivityName}>{nextActivityName}</Text>
+              ) : null}
+            </View>
+          );
+        })()}
       </View>
     </SafeAreaView>
   );
