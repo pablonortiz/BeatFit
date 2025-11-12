@@ -50,6 +50,10 @@ export default function RoutinesListScreen({ navigation }: Props) {
     navigation.navigate('ExecuteRoutine', { routine, mode: 'full' });
   };
 
+  const handleEditRoutine = (routine: Routine) => {
+    navigation.navigate('CreateRoutine', { mode: 'full', routine });
+  };
+
   const renderRoutineItem = ({ item }: { item: Routine }) => {
     const totalDuration = calculateRoutineDuration(item.blocks);
     const totalActivities = item.blocks.reduce(
@@ -88,6 +92,13 @@ export default function RoutinesListScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.actions}>
+          <Button
+            title="Editar"
+            onPress={() => handleEditRoutine(item)}
+            variant="outline"
+            size="small"
+            style={styles.actionButton}
+          />
           <Button
             title="Comenzar"
             onPress={() => handleStartRoutine(item)}

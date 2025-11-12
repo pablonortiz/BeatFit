@@ -23,19 +23,22 @@ import { useRoutines } from '../hooks/useStorage';
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateRoutine'>;
 
 export default function CreateRoutineScreen({ navigation, route }: Props) {
-  const { mode } = route.params;
-  const { saveRoutine } = useRoutines();
+  const { mode, routine: editingRoutine } = route.params;
+  const { saveRoutine, updateRoutine } = useRoutines();
   const insets = useSafeAreaInsets();
+  const isEditMode = !!editingRoutine;
 
-  const [routineName, setRoutineName] = useState('');
-  const [blocks, setBlocks] = useState<Block[]>([
-    {
-      id: generateId(),
-      name: 'Bloque 1',
-      activities: [],
-      repetitions: 1,
-    },
-  ]);
+  const [routineName, setRoutineName] = useState(editingRoutine?.name || '');
+  const [blocks, setBlocks] = useState<Block[]>(
+    editingRoutine?.blocks || [
+      {
+        id: generateId(),
+        name: 'Bloque 1',
+        activities: [],
+        repetitions: 1,
+      },
+    ]
+  );
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -129,21 +132,40 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       return;
     }
 
-    const routine: Routine = {
-      id: generateId(),
-      name: routineName.trim(),
-      blocks,
-      createdAt: Date.now(),
-    };
+    if (isEditMode && editingRoutine) {
+      // Modo edición: actualizar rutina existente
+      const updatedRoutine: Routine = {
+        ...editingRoutine,
+        name: routineName.trim(),
+        blocks,
+      };
 
-    await saveRoutine(routine);
-    setHasUnsavedChanges(false); // Marcar como guardado
-    Alert.alert('Éxito', 'Rutina guardada correctamente', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
+      await updateRoutine(updatedRoutine);
+      setHasUnsavedChanges(false);
+      Alert.alert('Éxito', 'Rutina actualizada correctamente', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } else {
+      // Modo creación: crear nueva rutina
+      const routine: Routine = {
+        id: generateId(),
+        name: routineName.trim(),
+        blocks,
+        createdAt: Date.now(),
+      };
+
+      await saveRoutine(routine);
+      setHasUnsavedChanges(false);
+      Alert.alert('Éxito', 'Rutina guardada correctamente', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    }
   };
 
   // Detectar si hay cambios
@@ -339,7 +361,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
         <Button
-          title="Guardar Rutina"
+          title={isEditMode ? "Actualizar Rutina" : "Guardar Rutina"}
           onPress={handleSaveRoutine}
           variant="primary"
           size="large"
