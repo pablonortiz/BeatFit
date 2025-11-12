@@ -32,8 +32,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [startTime] = useState(Date.now());
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const elapsedTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   const currentBlock = routine.blocks[currentBlockIndex];
@@ -70,6 +72,27 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       notificationService.cleanup();
     };
   }, []);
+
+  // Timer para tiempo transcurrido
+  useEffect(() => {
+    if (isPaused || isComplete) {
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+      }
+      return;
+    }
+
+    // Actualizar cada segundo
+    elapsedTimerRef.current = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+
+    return () => {
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+      }
+    };
+  }, [isPaused, isComplete, startTime]);
 
   // Función para guardar el entrenamiento completado
   const saveCompletedWorkout = useCallback(async () => {
@@ -239,6 +262,18 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const isRepsBasedActivity = currentActivity.exerciseType === 'reps';
   const isRestActivity = currentActivity.type === 'rest';
 
+  // Formatear tiempo transcurrido (MM:SS o HH:MM:SS)
+  const formatElapsedTime = (seconds: number): string => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (hrs > 0) {
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <SafeAreaView
       style={[
@@ -271,6 +306,16 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           Bloque {currentBlockIndex + 1}/{routine.blocks.length} • Rep {currentBlockRep + 1}/
           {currentBlock.repetitions}
         </Text>
+      </View>
+
+      {/* Elapsed Time Chip */}
+      <View style={styles.elapsedTimeContainer}>
+        <View style={styles.elapsedTimeChip}>
+          <Ionicons name="time-outline" size={18} color={theme.colors.accent} />
+          <Text style={styles.elapsedTimeText}>
+            {formatElapsedTime(elapsedTime)}
+          </Text>
+        </View>
       </View>
 
       {/* Main Content */}
@@ -391,6 +436,28 @@ const styles = StyleSheet.create({
   progressText: {
     ...theme.typography.caption,
     textAlign: 'center',
+  },
+  elapsedTimeContainer: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  elapsedTimeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.accent + '20',
+    borderRadius: theme.borderRadius.round,
+    borderWidth: 1.5,
+    borderColor: theme.colors.accent + '40',
+  },
+  elapsedTimeText: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.accent,
+    fontSize: 16,
+    fontVariant: ['tabular-nums'],
   },
   content: {
     flex: 1,
