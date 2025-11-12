@@ -1,4 +1,4 @@
-import { Routine } from '../types';
+import { Routine, WorkoutSession } from '../types';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -8,5 +8,6 @@ export type RootStackParamList = {
   ExerciseManager: undefined;
   ManageExercises: undefined;
   WorkoutHistory: undefined;
+  WorkoutDetail: { workout: WorkoutSession };
   Stats: undefined;
 };

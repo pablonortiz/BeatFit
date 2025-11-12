@@ -107,11 +107,16 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
     }
   };
 
+  const handleWorkoutPress = (workout: WorkoutSession) => {
+    navigation.navigate('WorkoutDetail', { workout });
+  };
+
   const renderWorkoutItem = ({ item }: { item: WorkoutSession }) => {
     const completionRate = (item.completedActivities / item.totalActivities) * 100;
 
     return (
-      <Card style={styles.workoutCard}>
+      <TouchableOpacity onPress={() => handleWorkoutPress(item)}>
+        <Card style={styles.workoutCard}>
         <View style={styles.workoutHeader}>
           <View style={styles.workoutInfo}>
             <Text style={styles.routineName}>{item.routineName}</Text>
@@ -155,6 +160,7 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
           />
         </View>
       </Card>
+      </TouchableOpacity>
     );
   };
 

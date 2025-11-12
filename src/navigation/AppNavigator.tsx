@@ -10,6 +10,7 @@ import RoutinesListScreen from '../screens/RoutinesListScreen';
 import CreateRoutineScreen from '../screens/CreateRoutineScreen';
 import ExecuteRoutineScreen from '../screens/ExecuteRoutineScreen';
 import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
+import WorkoutDetailScreen from '../screens/WorkoutDetailScreen';
 import StatsScreen from '../screens/StatsScreen';
 import ManageExercisesScreen from '../screens/ManageExercisesScreen';
 
@@ -73,6 +74,11 @@ export function AppNavigator() {
           name="WorkoutHistory"
           component={WorkoutHistoryScreen}
           options={{ title: 'Historial' }}
+        />
+        <Stack.Screen
+          name="WorkoutDetail"
+          component={WorkoutDetailScreen}
+          options={{ title: 'Detalle del Entrenamiento' }}
         />
         <Stack.Screen
           name="Stats"
