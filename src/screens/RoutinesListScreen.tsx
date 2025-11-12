@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -17,12 +19,15 @@ import { useRoutines } from '../hooks/useStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTimeLong, calculateRoutineDuration } from '../utils/helpers';
 import { Routine } from '../types';
+import { importExportService } from '../services/importExport';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoutinesList'>;
 
 export default function RoutinesListScreen({ navigation }: Props) {
   const { routines, loading, deleteRoutine, refresh } = useRoutines();
   const [refreshing, setRefreshing] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedRoutines, setSelectedRoutines] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
 
   const handleRefresh = async () => {
@@ -53,6 +58,89 @@ export default function RoutinesListScreen({ navigation }: Props) {
   const handleEditRoutine = (routine: Routine) => {
     navigation.navigate('CreateRoutine', { mode: 'full', routine });
   };
+
+  const handleExportPress = () => {
+    if (routines.length === 0) {
+      Alert.alert('Sin rutinas', 'No hay rutinas para exportar');
+      return;
+    }
+    setShowExportModal(true);
+  };
+
+  const handleExportAll = async () => {
+    setShowExportModal(false);
+    try {
+      await importExportService.exportRoutines(routines);
+      Alert.alert('Éxito', 'Rutinas exportadas correctamente');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudieron exportar las rutinas');
+    }
+  };
+
+  const handleExportSelected = async () => {
+    if (selectedRoutines.size === 0) {
+      Alert.alert('Sin selección', 'Selecciona al menos una rutina para exportar');
+      return;
+    }
+
+    setShowExportModal(false);
+    try {
+      const routinesToExport = routines.filter(r => selectedRoutines.has(r.id));
+      await importExportService.exportRoutines(routinesToExport);
+      Alert.alert('Éxito', `${routinesToExport.length} rutina${routinesToExport.length !== 1 ? 's' : ''} exportada${routinesToExport.length !== 1 ? 's' : ''} correctamente`);
+      setSelectedRoutines(new Set());
+    } catch (error) {
+      Alert.alert('Error', 'No se pudieron exportar las rutinas');
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const result = await importExportService.importRoutines();
+      if (result.success) {
+        Alert.alert('Éxito', result.message);
+        await refresh();
+      } else {
+        Alert.alert('Información', result.message);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudieron importar las rutinas');
+    }
+  };
+
+  const toggleRoutineSelection = (id: string) => {
+    const newSelection = new Set(selectedRoutines);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedRoutines(newSelection);
+  };
+
+  const selectAllRoutines = () => {
+    setSelectedRoutines(new Set(routines.map(r => r.id)));
+  };
+
+  const deselectAllRoutines = () => {
+    setSelectedRoutines(new Set());
+  };
+
+  // Agregar botones de import/export en el header
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginRight: theme.spacing.sm }}>
+          <TouchableOpacity onPress={handleImport} style={{ padding: theme.spacing.xs }}>
+            <Ionicons name="cloud-download-outline" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleExportPress} style={{ padding: theme.spacing.xs }}>
+            <Ionicons name="cloud-upload-outline" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, routines]);
 
   const renderRoutineItem = ({ item }: { item: Routine }) => {
     const totalDuration = calculateRoutineDuration(item.blocks);
@@ -143,6 +231,81 @@ export default function RoutinesListScreen({ navigation }: Props) {
           />
         }
       />
+
+      {/* Export Modal */}
+      <Modal
+        visible={showExportModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowExportModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Exportar Rutinas</Text>
+              <TouchableOpacity onPress={() => setShowExportModal(false)}>
+                <Ionicons name="close" size={28} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll}>
+              <Text style={styles.modalDescription}>
+                Selecciona las rutinas que deseas exportar o exporta todas
+              </Text>
+
+              <View style={styles.selectionButtons}>
+                <Button
+                  title="Seleccionar Todas"
+                  onPress={selectAllRoutines}
+                  variant="ghost"
+                  size="small"
+                />
+                <Button
+                  title="Deseleccionar"
+                  onPress={deselectAllRoutines}
+                  variant="ghost"
+                  size="small"
+                />
+              </View>
+
+              {routines.map((routine) => (
+                <TouchableOpacity
+                  key={routine.id}
+                  style={styles.routineSelectItem}
+                  onPress={() => toggleRoutineSelection(routine.id)}
+                >
+                  <View style={styles.checkbox}>
+                    {selectedRoutines.has(routine.id) && (
+                      <Ionicons name="checkmark" size={20} color={theme.colors.primary} />
+                    )}
+                  </View>
+                  <Text style={styles.routineSelectName}>{routine.name}</Text>
+                  <Text style={styles.routineSelectInfo}>
+                    {routine.blocks.length} bloques
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <Button
+                title="Exportar Todas"
+                onPress={handleExportAll}
+                variant="outline"
+                size="medium"
+                style={{ flex: 1 }}
+              />
+              <Button
+                title={`Exportar ${selectedRoutines.size > 0 ? `(${selectedRoutines.size})` : 'Seleccionadas'}`}
+                onPress={handleExportSelected}
+                variant="primary"
+                size="medium"
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -216,5 +379,75 @@ const styles = StyleSheet.create({
   },
   createButton: {
     minWidth: 200,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalTitle: {
+    ...theme.typography.h3,
+  },
+  modalScroll: {
+    maxHeight: 400,
+  },
+  modalDescription: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+  },
+  selectionButtons: {
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  routineSelectItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    marginRight: theme.spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  routineSelectName: {
+    ...theme.typography.bodyBold,
+    flex: 1,
+  },
+  routineSelectInfo: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    padding: theme.spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
 });

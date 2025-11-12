@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useWorkoutHistory } from '../hooks/useStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTimeLong } from '../utils/helpers';
 import { WorkoutSession } from '../types';
+import { importExportService } from '../services/importExport';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutHistory'>;
 
@@ -45,6 +46,50 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
       ]
     );
   };
+
+  const handleExport = async () => {
+    if (history.length === 0) {
+      Alert.alert('Sin historial', 'No hay entrenamientos para exportar');
+      return;
+    }
+
+    try {
+      await importExportService.exportHistory(history);
+      Alert.alert('Éxito', 'Historial exportado correctamente');
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo exportar el historial');
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const result = await importExportService.importHistory();
+      if (result.success) {
+        Alert.alert('Éxito', result.message);
+        await refresh();
+      } else {
+        Alert.alert('Información', result.message);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo importar el historial');
+    }
+  };
+
+  // Agregar botones de import/export en el header
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginRight: theme.spacing.sm }}>
+          <TouchableOpacity onPress={handleImport} style={{ padding: theme.spacing.xs }}>
+            <Ionicons name="cloud-download-outline" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleExport} style={{ padding: theme.spacing.xs }}>
+            <Ionicons name="cloud-upload-outline" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation, history]);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
