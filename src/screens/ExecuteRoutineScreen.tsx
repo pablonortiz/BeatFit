@@ -15,16 +15,18 @@ import { theme } from '../theme';
 import { Button } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { Activity, Block, WorkoutSession } from '../types';
-import { formatTime, generateId } from '../utils/helpers';
+import { formatTime, generateId, formatTimeLong } from '../utils/helpers';
 import { notificationService } from '../services/notification';
 import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import { useWorkoutHistory } from '../hooks/useStorage';
+import { getBestTimeForRoutine } from '../utils/stats';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExecuteRoutine'>;
 
 export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const { routine } = route.params;
-  const { saveWorkout } = useWorkoutHistory();
+  const { saveWorkout, history } = useWorkoutHistory();
+  const bestTime = getBestTimeForRoutine(routine.id, history);
 
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [currentBlockRep, setCurrentBlockRep] = useState(0);
@@ -406,6 +408,14 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             {formatElapsedTime(elapsedTime)}
           </Text>
         </View>
+        {bestTime && (
+          <View style={styles.bestTimeChip}>
+            <Ionicons name="trophy-outline" size={16} color={theme.colors.warning} />
+            <Text style={styles.bestTimeChipText}>
+              Récord: {formatTimeLong(bestTime)}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Pending Activities Indicator */}
@@ -675,9 +685,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   elapsedTimeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: theme.spacing.sm,
     marginBottom: theme.spacing.lg,
     paddingHorizontal: theme.spacing.lg,
+    flexWrap: 'wrap',
   },
   elapsedTimeChip: {
     flexDirection: 'row',
@@ -695,6 +709,23 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontSize: 16,
     fontVariant: ['tabular-nums'],
+  },
+  bestTimeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.warning + '15',
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.warning + '40',
+  },
+  bestTimeChipText: {
+    ...theme.typography.caption,
+    color: theme.colors.warning,
+    fontSize: 12,
+    fontWeight: '600',
   },
   pendingIndicatorContainer: {
     alignItems: 'center',

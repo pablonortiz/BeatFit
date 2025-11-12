@@ -15,16 +15,18 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 import { Card, Button } from '../components';
-import { useRoutines } from '../hooks/useStorage';
+import { useRoutines, useWorkoutHistory } from '../hooks/useStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTimeLong, calculateRoutineDuration } from '../utils/helpers';
 import { Routine } from '../types';
 import { importExportService } from '../services/importExport';
+import { getRoutineStats } from '../utils/stats';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoutinesList'>;
 
 export default function RoutinesListScreen({ navigation }: Props) {
   const { routines, loading, deleteRoutine, refresh } = useRoutines();
+  const { history } = useWorkoutHistory();
   const [refreshing, setRefreshing] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedRoutines, setSelectedRoutines] = useState<Set<string>>(new Set());
@@ -148,12 +150,21 @@ export default function RoutinesListScreen({ navigation }: Props) {
       (sum, block) => sum + block.activities.length * block.repetitions,
       0
     );
+    const stats = getRoutineStats(item.id, history);
 
     return (
       <Card style={styles.routineCard}>
         <View style={styles.routineHeader}>
           <View style={styles.routineInfo}>
-            <Text style={styles.routineName}>{item.name}</Text>
+            <View style={styles.routineNameRow}>
+              <Text style={styles.routineName}>{item.name}</Text>
+              {stats.bestTime && (
+                <View style={styles.bestTimeBadge}>
+                  <Ionicons name="trophy" size={14} color={theme.colors.warning} />
+                  <Text style={styles.bestTimeText}>{formatTimeLong(stats.bestTime)}</Text>
+                </View>
+              )}
+            </View>
             <View style={styles.statsRow}>
               <View style={styles.stat}>
                 <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
@@ -330,9 +341,32 @@ const styles = StyleSheet.create({
   routineInfo: {
     flex: 1,
   },
+  routineNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    flexWrap: 'wrap',
+  },
   routineName: {
     ...theme.typography.h3,
-    marginBottom: theme.spacing.sm,
+  },
+  bestTimeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: theme.colors.warning + '20',
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.warning + '40',
+  },
+  bestTimeText: {
+    ...theme.typography.caption,
+    color: theme.colors.warning,
+    fontSize: 11,
+    fontWeight: '600',
   },
   statsRow: {
     flexDirection: 'row',

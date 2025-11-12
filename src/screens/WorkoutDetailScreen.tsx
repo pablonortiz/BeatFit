@@ -14,11 +14,15 @@ import { Card } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTime, formatTimeLong } from '../utils/helpers';
 import { Activity } from '../types';
+import { useWorkoutHistory } from '../hooks/useStorage';
+import { isBestTime } from '../utils/stats';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutDetail'>;
 
 export default function WorkoutDetailScreen({ navigation, route }: Props) {
   const { workout } = route.params;
+  const { history } = useWorkoutHistory();
+  const isPersonalBest = isBestTime(workout, history);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -121,7 +125,15 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header Card */}
         <Card style={styles.headerCard}>
-          <Text style={styles.routineName}>{workout.routineName}</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.routineName}>{workout.routineName}</Text>
+            {isPersonalBest && (
+              <View style={styles.bestTimeBadge}>
+                <Ionicons name="trophy" size={20} color={theme.colors.warning} />
+                <Text style={styles.bestTimeLabel}>¡Mejor Tiempo!</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.dateText}>{formatDate(workout.completedAt)}</Text>
           <Text style={styles.timeText}>
             {formatTimeOfDay(workout.startedAt)} - {formatTimeOfDay(workout.completedAt)}
@@ -202,9 +214,31 @@ const styles = StyleSheet.create({
   headerCard: {
     margin: theme.spacing.lg,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
   routineName: {
     ...theme.typography.h2,
-    marginBottom: theme.spacing.xs,
+  },
+  bestTimeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.warning + '20',
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 2,
+    borderColor: theme.colors.warning,
+  },
+  bestTimeLabel: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.warning,
+    fontSize: 14,
   },
   dateText: {
     ...theme.typography.body,
