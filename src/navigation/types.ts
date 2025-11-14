@@ -3,8 +3,8 @@ import { Routine, WorkoutSession } from '../types';
 export type RootStackParamList = {
   Home: undefined;
   RoutinesList: undefined;
-  CreateRoutine: { mode: 'full' | 'dynamic'; routine?: Routine };
-  ExecuteRoutine: { routine: Routine; mode: 'full' | 'dynamic' };
+  CreateRoutine: { routine?: Routine };
+  ExecuteRoutine: { routine: Routine };
   ExerciseManager: undefined;
   ManageExercises: undefined;
   WorkoutHistory: undefined;

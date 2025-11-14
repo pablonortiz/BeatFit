@@ -56,11 +56,11 @@ export default function RoutinesListScreen({ navigation }: Props) {
   };
 
   const handleStartRoutine = (routine: Routine) => {
-    navigation.navigate('ExecuteRoutine', { routine, mode: 'full' });
+    navigation.navigate('ExecuteRoutine', { routine });
   };
 
   const handleEditRoutine = (routine: Routine) => {
-    navigation.navigate('CreateRoutine', { mode: 'full', routine });
+    navigation.navigate('CreateRoutine', { routine });
   };
 
   const handleExportPress = () => {
@@ -233,7 +233,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
         </Text>
         <Button
           title="Crear Rutina"
-          onPress={() => navigation.navigate('CreateRoutine', { mode: 'full' })}
+          onPress={() => navigation.navigate('CreateRoutine', {})}
           style={styles.createButton}
         />
       </View>

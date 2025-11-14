@@ -145,6 +145,9 @@ export function CustomAlert({
                 activeOpacity={0.7}
               >
                 <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
                   style={[
                     styles.buttonText,
                     button.style === 'cancel' && styles.buttonTextCancel,
@@ -170,14 +173,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.lg,
   },
   alertContainer: {
     backgroundColor: theme.colors.backgroundCard,
     borderRadius: theme.borderRadius.xl,
     padding: theme.spacing.xl,
     width: '100%',
-    maxWidth: 340,
+    maxWidth: 380,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
@@ -216,7 +219,7 @@ const styles = StyleSheet.create({
   },
   button: {
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -228,6 +231,7 @@ const styles = StyleSheet.create({
   },
   buttonDouble: {
     flex: 1,
+    minWidth: 0, // Permite que el flex funcione correctamente
   },
   buttonCancel: {
     backgroundColor: theme.colors.backgroundCardLight,
@@ -238,6 +242,8 @@ const styles = StyleSheet.create({
   buttonText: {
     ...theme.typography.button,
     color: theme.colors.white,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   buttonTextCancel: {
     color: theme.colors.textPrimary,

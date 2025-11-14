@@ -39,7 +39,11 @@ export interface Activity {
   exerciseType: ExerciseType; // 'time' o 'reps'
   duration?: number; // en segundos (para type='time')
   reps?: number; // número de repeticiones (para type='reps')
+  estimatedTime?: number; // tiempo estimado en segundos (para cálculos)
 }
+
+// Tipos de bloques
+export type BlockType = 'normal' | 'warmup' | 'cooldown' | 'rest-block';
 
 // Bloque de ejercicios con repeticiones
 export interface Block {
@@ -47,6 +51,7 @@ export interface Block {
   name?: string;
   activities: Activity[];
   repetitions: number; // Cuántas veces se repite este bloque
+  type?: BlockType; // Tipo de bloque: normal, warmup (calentamiento), cooldown (elongación)
 }
 
 // Rutina completa
@@ -71,8 +76,22 @@ export interface RoutineExecutionState {
   completedAt?: number;
 }
 
-// Modo de creación de rutina
-export type RoutineMode = 'full' | 'dynamic'; // 'full' = armar completa, 'dynamic' = ejercicio por ejercicio
+// Estados de una actividad ejecutada
+export type ActivityExecutionStatus = 'completed' | 'skipped' | 'postponed';
+
+// Actividad ejecutada con información de ejecución
+export interface ExecutedActivity {
+  activity: Activity;
+  blockIndex: number;
+  blockName: string;
+  blockRepetition: number;
+  status: ActivityExecutionStatus;
+  startedAt?: number; // Timestamp de cuando empezó
+  completedAt?: number; // Timestamp de cuando terminó
+  postponedAt?: number; // Timestamp de cuando se postergó (si fue postergada)
+  wasPostponed: boolean; // Si esta actividad fue postergada antes
+  pausedTime?: number; // Tiempo total pausado en esta actividad (en segundos)
+}
 
 // Entrenamiento completado (historial)
 export interface WorkoutSession {
@@ -85,6 +104,7 @@ export interface WorkoutSession {
   totalActivities: number;
   completedActivities: number;
   blocks: Block[]; // Copia de los bloques al momento de hacer el entrenamiento
+  executionTimeline?: ExecutedActivity[]; // Línea de tiempo real de ejecución
   syncedToCloud?: boolean;
 }
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,18 +13,11 @@ import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 import { Button, Card } from '../components';
 import { Ionicons } from '@expo/vector-icons';
-import { isUsingRemoteStorage } from '../services/storage';
-import { requestMicrophonePermission } from '../hooks/useVoiceRecognition';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
-
-  // Pedir permiso de micrófono al montar
-  useEffect(() => {
-    requestMicrophonePermission();
-  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -37,38 +30,21 @@ export default function HomeScreen({ navigation }: Props) {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.modeCard}>
           <View style={styles.iconContainer}>
-            <Ionicons name="list" size={48} color={theme.colors.primary} />
+            <Ionicons name="list" size={40} color={theme.colors.primary} />
           </View>
-          <Text style={styles.modeTitle}>Rutina Completa</Text>
+          <Text style={styles.modeTitle}>Crear Nueva Rutina</Text>
           <Text style={styles.modeDescription}>
             Arma tu rutina de principio a fin con bloques y repeticiones
           </Text>
           <Button
             title="Crear Rutina"
-            onPress={() => navigation.navigate('CreateRoutine', { mode: 'full' })}
+            onPress={() => navigation.navigate('CreateRoutine', {})}
             variant="primary"
-            fullWidth
-            style={styles.modeButton}
-          />
-        </Card>
-
-        <Card style={styles.modeCard}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="play-forward" size={48} color={theme.colors.accent} />
-          </View>
-          <Text style={styles.modeTitle}>Modo Dinámico</Text>
-          <Text style={styles.modeDescription}>
-            Ve ejercicio por ejercicio, agrega sobre la marcha
-          </Text>
-          <Button
-            title="Comenzar"
-            onPress={() => navigation.navigate('CreateRoutine', { mode: 'dynamic' })}
-            variant="accent"
             fullWidth
             style={styles.modeButton}
           />
@@ -124,8 +100,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xxl,
-    paddingBottom: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
     alignItems: 'center',
   },
   logo: {
@@ -139,29 +115,30 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
   },
   modeCard: {
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
     alignItems: 'center',
+    paddingVertical: theme.spacing.lg,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.borderRadius.xl,
+    width: 64,
+    height: 64,
+    borderRadius: theme.borderRadius.lg,
     backgroundColor: theme.colors.backgroundCardLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   modeTitle: {
     ...theme.typography.h3,
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   modeDescription: {
     ...theme.typography.bodySmall,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
     color: theme.colors.textSecondary,
   },
   modeButton: {
@@ -170,13 +147,14 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     gap: theme.spacing.md,
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.md,
   },
   actionCard: {
     flex: 1,
     backgroundColor: theme.colors.backgroundCard,
     borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,

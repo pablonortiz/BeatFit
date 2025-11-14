@@ -54,7 +54,7 @@ const slides: OnboardingSlide[] = [
   {
     id: '5',
     title: '¡Listo para Empezar!',
-    description: 'Crea tu primera rutina o comienza en modo dinámico. ¡A entrenar!',
+    description: 'Crea tu primera rutina y comienza a entrenar. ¡Vamos!',
     icon: 'rocket',
     color: theme.colors.primary,
   },

@@ -1,7 +1,7 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { Routine, WorkoutSession, Exercise } from '../types';
+import { Routine, WorkoutSession, ExerciseTemplate } from '../types';
 import { storageService } from './storage';
 
 class ImportExportService {
@@ -135,10 +135,10 @@ class ImportExportService {
 
               if (!exercisesByName.has(exerciseName)) {
                 // Crear el ejercicio si no existe
-                const newExercise: Exercise = {
+                const newExercise: ExerciseTemplate = {
                   id: activity.id || `exercise_${Date.now()}_${Math.random()}`,
                   name: activity.name,
-                  icon: activity.icon || 'fitness-outline',
+                  icon: activity.icon || 'fitness',
                   createdAt: Date.now(),
                 };
 
@@ -150,8 +150,17 @@ class ImportExportService {
           }
         }
 
-        // Guardar la rutina
-        await storageService.saveRoutine(routine);
+        // Normalizar bloques para asegurar compatibilidad
+        const normalizedRoutine = {
+          ...routine,
+          blocks: routine.blocks.map((block: any) => ({
+            ...block,
+            type: block.type || 'normal', // Valor por defecto si no existe
+          })),
+        };
+
+        // Guardar la rutina normalizada
+        await storageService.saveRoutine(normalizedRoutine);
         importedCount++;
       }
 
@@ -203,8 +212,37 @@ class ImportExportService {
           continue;
         }
 
-        // Guardar la sesión
-        await storageService.saveWorkoutSession(session);
+        // Normalizar la sesión para asegurar compatibilidad
+        const normalizedSession: WorkoutSession = {
+          id: session.id,
+          routineId: session.routineId,
+          routineName: session.routineName,
+          startedAt: session.startedAt,
+          completedAt: session.completedAt,
+          duration: session.duration || 0,
+          totalActivities: session.totalActivities || 0,
+          completedActivities: session.completedActivities || 0,
+          blocks: session.blocks || [],
+          // Preservar executionTimeline si existe, o inicializar como array vacío
+          executionTimeline: Array.isArray(session.executionTimeline) 
+            ? session.executionTimeline.map((executed: any) => ({
+                activity: executed.activity,
+                blockIndex: executed.blockIndex ?? 0,
+                blockName: executed.blockName || '',
+                blockRepetition: executed.blockRepetition ?? 0,
+                status: executed.status || 'completed',
+                startedAt: executed.startedAt,
+                completedAt: executed.completedAt,
+                postponedAt: executed.postponedAt,
+                wasPostponed: executed.wasPostponed ?? false,
+                pausedTime: executed.pausedTime,
+              }))
+            : undefined,
+          syncedToCloud: session.syncedToCloud,
+        };
+
+        // Guardar la sesión normalizada
+        await storageService.saveWorkoutSession(normalizedSession);
         importedCount++;
       }
 

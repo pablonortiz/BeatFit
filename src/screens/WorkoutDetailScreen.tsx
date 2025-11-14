@@ -13,7 +13,7 @@ import { theme } from '../theme';
 import { Card } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTime, formatTimeLong } from '../utils/helpers';
-import { Activity } from '../types';
+import { Activity, ExecutedActivity } from '../types';
 import { useWorkoutHistory } from '../hooks/useStorage';
 import { isBestTime } from '../utils/stats';
 
@@ -48,46 +48,119 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
     return Math.floor(totalDuration / totalActivities);
   };
 
-  // Calcular todas las actividades con su tiempo estimado
-  const activitiesWithTime: Array<Activity & { blockIndex: number; blockName: string; rep: number; estimatedTime: number }> = [];
+  // Usar executionTimeline si está disponible, de lo contrario generar la lista tradicional
+  const activitiesWithTime: Array<Activity & {
+    blockIndex: number;
+    blockName: string;
+    rep: number;
+    estimatedTime: number;
+    status?: 'completed' | 'skipped' | 'postponed';
+    wasPostponed?: boolean;
+    postponedAt?: number;
+    actualStartedAt?: number;
+    actualCompletedAt?: number;
+  }> = [];
 
-  workout.blocks.forEach((block, blockIndex) => {
-    for (let rep = 0; rep < block.repetitions; rep++) {
-      block.activities.forEach((activity) => {
-        const estimatedTime = calculateActivityTime(activity, workout.duration, workout.totalActivities);
-        activitiesWithTime.push({
-          ...activity,
-          blockIndex,
-          blockName: block.name,
-          rep: rep + 1,
-          estimatedTime,
-        });
+  if (workout.executionTimeline && workout.executionTimeline.length > 0) {
+    // Usar la línea de tiempo real
+    workout.executionTimeline.forEach((executed: ExecutedActivity) => {
+      const duration = executed.completedAt && executed.startedAt
+        ? Math.floor((executed.completedAt - executed.startedAt) / 1000)
+        : calculateActivityTime(executed.activity, workout.duration, workout.totalActivities);
+
+      activitiesWithTime.push({
+        ...executed.activity,
+        blockIndex: executed.blockIndex,
+        blockName: executed.blockName,
+        rep: executed.blockRepetition,
+        estimatedTime: duration,
+        status: executed.status,
+        wasPostponed: executed.wasPostponed,
+        postponedAt: executed.postponedAt,
+        actualStartedAt: executed.startedAt,
+        actualCompletedAt: executed.completedAt,
+        pausedTime: executed.pausedTime,
       });
-    }
-  });
+    });
+  } else {
+    // Generar la lista tradicional
+    workout.blocks.forEach((block, blockIndex) => {
+      for (let rep = 0; rep < block.repetitions; rep++) {
+        block.activities.forEach((activity) => {
+          const estimatedTime = calculateActivityTime(activity, workout.duration, workout.totalActivities);
+          activitiesWithTime.push({
+            ...activity,
+            blockIndex,
+            blockName: block.name,
+            rep: rep + 1,
+            estimatedTime,
+          });
+        });
+      }
+    });
+  }
 
   const renderTimelineItem = (
-    activity: Activity & { blockIndex: number; blockName: string; rep: number; estimatedTime: number },
+    activity: Activity & {
+      blockIndex: number;
+      blockName: string;
+      rep: number;
+      estimatedTime: number;
+      status?: 'completed' | 'skipped' | 'postponed';
+      wasPostponed?: boolean;
+      postponedAt?: number;
+      actualStartedAt?: number;
+      actualCompletedAt?: number;
+      pausedTime?: number;
+    },
     index: number
   ) => {
     const isRest = activity.type === 'rest';
     const isLastItem = index === activitiesWithTime.length - 1;
+    const isSkipped = activity.status === 'skipped';
+    const wasPostponedLater = activity.status === 'postponed';
+    const wasPostponedBefore = activity.wasPostponed;
+
+    // Determinar color del icono basado en estado
+    let iconColor = isRest ? theme.colors.rest : theme.colors.exercise;
+    let iconBgColor = isRest ? theme.colors.rest + '20' : theme.colors.exercise + '20';
+    let iconBorderColor = isRest ? theme.colors.rest : theme.colors.exercise;
+
+    if (isSkipped) {
+      iconColor = theme.colors.error;
+      iconBgColor = theme.colors.error + '20';
+      iconBorderColor = theme.colors.error;
+    } else if (wasPostponedLater) {
+      iconColor = theme.colors.warning;
+      iconBgColor = theme.colors.warning + '20';
+      iconBorderColor = theme.colors.warning;
+    }
 
     return (
       <View key={`${activity.id}-${index}`} style={styles.timelineItemContainer}>
         <View style={styles.timelineItem}>
           {/* Icon Container */}
-          <View style={[styles.timelineIcon, isRest && styles.timelineIconRest]}>
+          <View style={[styles.timelineIcon, { backgroundColor: iconBgColor, borderColor: iconBorderColor }]}>
             <Ionicons
               name={activity.icon as any}
               size={32}
-              color={isRest ? theme.colors.rest : theme.colors.exercise}
+              color={iconColor}
             />
+            {isSkipped && (
+              <View style={styles.statusBadge}>
+                <Ionicons name="close-circle" size={16} color={theme.colors.error} />
+              </View>
+            )}
+            {wasPostponedBefore && (
+              <View style={[styles.statusBadge, { backgroundColor: theme.colors.warning }]}>
+                <Ionicons name="return-down-back" size={14} color="white" />
+              </View>
+            )}
           </View>
 
           {/* Activity Info */}
           <View style={styles.timelineContent}>
-            <Text style={styles.activityName} numberOfLines={2}>
+            <Text style={[styles.activityName, isSkipped && styles.activityNameSkipped]} numberOfLines={2}>
               {activity.name}
             </Text>
             <View style={styles.activityMeta}>
@@ -96,7 +169,7 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
                 <Text style={styles.metaText}>
                   {activity.exerciseType === 'time' && activity.duration
                     ? formatTime(activity.duration)
-                    : `~${formatTime(activity.estimatedTime)}`}
+                    : formatTime(activity.estimatedTime)}
                 </Text>
               </View>
               {activity.exerciseType === 'reps' && (
@@ -106,9 +179,29 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
                 </View>
               )}
             </View>
+            
+            {/* Pause indicator - prominente y separado */}
+            {activity.pausedTime && activity.pausedTime > 0 && (
+              <View style={styles.pausedIndicatorBox}>
+                <Ionicons name="pause-circle" size={16} color={theme.colors.warning} />
+                <Text style={styles.pausedIndicatorText}>
+                  Pausado: {formatTime(activity.pausedTime)}
+                </Text>
+              </View>
+            )}
+            
             <Text style={styles.blockInfo}>
               {activity.blockName} • Rep {activity.rep}
             </Text>
+            {isSkipped && (
+              <Text style={styles.statusLabel}>Saltado</Text>
+            )}
+            {wasPostponedLater && (
+              <Text style={[styles.statusLabel, { color: theme.colors.warning }]}>Postergado</Text>
+            )}
+            {wasPostponedBefore && (
+              <Text style={[styles.statusLabel, { color: theme.colors.warning }]}>Completado después</Text>
+            )}
           </View>
         </View>
 
@@ -119,6 +212,11 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
   };
 
   const completionRate = (workout.completedActivities / workout.totalActivities) * 100;
+
+  // Calcular tiempo total en pausa
+  const totalPausedTime = activitiesWithTime.reduce((sum, activity) => {
+    return sum + (activity.pausedTime || 0);
+  }, 0);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -160,6 +258,19 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
             </View>
           </View>
 
+          {/* Pause Time Stat - Only show if there was pause time */}
+          {totalPausedTime > 0 && (
+            <View style={styles.pauseStatContainer}>
+              <View style={styles.pauseStatContent}>
+                <Ionicons name="pause-circle" size={24} color={theme.colors.warning} />
+                <View style={styles.pauseStatText}>
+                  <Text style={styles.pauseStatValue}>{formatTimeLong(totalPausedTime)}</Text>
+                  <Text style={styles.pauseStatLabel}>en pausa durante la rutina</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           {/* Progress bar */}
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${completionRate}%` }]} />
@@ -185,21 +296,61 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
         {/* Blocks Summary */}
         <View style={styles.blocksSection}>
           <Text style={styles.sectionTitle}>Resumen por Bloques</Text>
-          {workout.blocks.map((block, index) => (
-            <Card key={block.id} style={styles.blockCard}>
-              <Text style={styles.blockName}>{block.name}</Text>
-              <View style={styles.blockStats}>
-                <View style={styles.blockStat}>
-                  <Ionicons name="repeat-outline" size={16} color={theme.colors.textSecondary} />
-                  <Text style={styles.blockStatText}>{block.repetitions} repeticiones</Text>
+          {workout.blocks.map((block, index) => {
+            const isSpecialBlock = block.type === 'warmup' || block.type === 'cooldown' || block.type === 'rest-block';
+            const blockColor = 
+              block.type === 'warmup' 
+                ? theme.colors.info 
+                : block.type === 'cooldown' 
+                ? theme.colors.success 
+                : block.type === 'rest-block'
+                ? theme.colors.rest
+                : undefined;
+            
+            const blockIcon = 
+              block.type === 'warmup' 
+                ? 'flame' 
+                : block.type === 'cooldown' 
+                ? 'leaf' 
+                : 'pause-circle'; // rest-block
+            
+            return (
+              <Card 
+                key={block.id} 
+                style={[
+                  styles.blockCard,
+                  isSpecialBlock && { borderLeftWidth: 4, borderLeftColor: blockColor },
+                ]}
+              >
+                <View style={styles.blockHeader}>
+                  {isSpecialBlock && (
+                    <Ionicons 
+                      name={blockIcon as any} 
+                      size={20} 
+                      color={blockColor}
+                      style={{ marginRight: theme.spacing.sm }}
+                    />
+                  )}
+                  <Text style={[
+                    styles.blockName,
+                    isSpecialBlock && { color: blockColor, fontWeight: '600' },
+                  ]}>
+                    {block.name}
+                  </Text>
                 </View>
-                <View style={styles.blockStat}>
-                  <Ionicons name="list-outline" size={16} color={theme.colors.textSecondary} />
-                  <Text style={styles.blockStatText}>{block.activities.length} actividades</Text>
+                <View style={styles.blockStats}>
+                  <View style={styles.blockStat}>
+                    <Ionicons name="repeat-outline" size={16} color={theme.colors.textSecondary} />
+                    <Text style={styles.blockStatText}>{block.repetitions} repeticiones</Text>
+                  </View>
+                  <View style={styles.blockStat}>
+                    <Ionicons name="list-outline" size={16} color={theme.colors.textSecondary} />
+                    <Text style={styles.blockStatText}>{block.activities.length} actividades</Text>
+                  </View>
                 </View>
-              </View>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -343,6 +494,58 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
   },
+  pausedMeta: {
+    backgroundColor: theme.colors.warning + '15',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.sm,
+  },
+  pausedIndicatorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.colors.warning + '20',
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 6,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.warning + '40',
+    alignSelf: 'center',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  pausedIndicatorText: {
+    ...theme.typography.caption,
+    color: theme.colors.warning,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  pauseStatContainer: {
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.warning + '15',
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.warning + '30',
+  },
+  pauseStatContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  pauseStatText: {
+    flex: 1,
+  },
+  pauseStatValue: {
+    ...theme.typography.h3,
+    color: theme.colors.warning,
+    fontWeight: '700',
+  },
+  pauseStatLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.warning,
+    marginTop: 2,
+  },
   blockInfo: {
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
@@ -364,9 +567,13 @@ const styles = StyleSheet.create({
   blockCard: {
     marginBottom: theme.spacing.md,
   },
+  blockHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
   blockName: {
     ...theme.typography.h4,
-    marginBottom: theme.spacing.sm,
   },
   blockStats: {
     flexDirection: 'row',
@@ -380,5 +587,29 @@ const styles = StyleSheet.create({
   blockStatText: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
+  },
+  statusBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.background,
+  },
+  activityNameSkipped: {
+    opacity: 0.5,
+    textDecorationLine: 'line-through',
+  },
+  statusLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.error,
+    fontSize: 11,
+    marginTop: theme.spacing.xs,
+    fontWeight: '600',
   },
 });

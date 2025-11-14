@@ -15,6 +15,16 @@ interface VoiceRecognitionHook {
 export async function requestMicrophonePermission(): Promise<boolean> {
   if (Platform.OS === 'android') {
     try {
+      // Primero verificar si ya tenemos el permiso
+      const hasPermission = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+      );
+      
+      if (hasPermission) {
+        return true;
+      }
+      
+      // Solo solicitar si no lo tenemos
       const granted = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
         {
@@ -35,7 +45,14 @@ export async function requestMicrophonePermission(): Promise<boolean> {
 
 export function useVoiceRecognition(
   onDone: () => void,
-  keywords: string[] = ['terminé', 'termine', 'listo', 'siguiente', 'done']
+  keywords: string[] = [
+    'terminé', 'termine', 'terminado', 'terminada',
+    'listo', 'lista', 'listos', 'listas',
+    'siguiente', 'sigue', 'continúa', 'continua',
+    'done', 'finished', 'next', 'ready',
+    'ya', 'ok', 'adelante', 'hecho', 'hecha',
+    'completo', 'completa', 'fin', 'final'
+  ]
 ): VoiceRecognitionHook {
   const [isListening, setIsListening] = useState(false);
   const [lastTranscript, setLastTranscript] = useState('');
@@ -44,6 +61,7 @@ export function useVoiceRecognition(
   const isListeningRef = useRef(false);
   const onDoneRef = useRef(onDone);
   const keywordsRef = useRef(keywords);
+  const lastCallTimeRef = useRef(0);
 
   // Actualizar refs cuando cambien
   useEffect(() => {
@@ -62,18 +80,48 @@ export function useVoiceRecognition(
     Voice.onSpeechResults = (e) => {
       console.log('[Voice] onSpeechResults:', e.value);
       if (e.value && e.value.length > 0) {
-        const text = e.value[0].toLowerCase();
+        const text = e.value[0].toLowerCase().trim();
         setLastTranscript(text);
 
-        // Verificar si alguna palabra clave fue detectada
-        const matched = keywordsRef.current.some(keyword =>
-          text.includes(keyword.toLowerCase())
-        );
+        // Normalizar texto: quitar acentos para mejor matching
+        const normalizeText = (str: string) => {
+          return str
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+        };
 
-        console.log('[Voice] Texto detectado:', text, 'Matched:', matched);
+        const normalizedText = normalizeText(text);
+
+        // Verificar si alguna palabra clave fue detectada
+        const matched = keywordsRef.current.some(keyword => {
+          const normalizedKeyword = normalizeText(keyword);
+          // Buscar palabra exacta o que el texto contenga la palabra
+          const words = normalizedText.split(/\s+/);
+          return words.includes(normalizedKeyword) || normalizedText.includes(normalizedKeyword);
+        });
+
+        console.log('[Voice] Texto detectado:', text, 'Normalizado:', normalizedText, 'Matched:', matched);
 
         if (matched) {
-          console.log('[Voice] Palabra clave detectada! Llamando onDone');
+          // Evitar llamadas duplicadas (debouncing)
+          const now = Date.now();
+          if (now - lastCallTimeRef.current < 1500) {
+            console.log('[Voice] Ignorando detección duplicada (debounce)');
+            return;
+          }
+          lastCallTimeRef.current = now;
+
+          console.log('[Voice] ¡Palabra clave detectada! Llamando onDone');
+          
+          // Dar feedback de voz (opcional)
+          Speech.speak('Entendido', {
+            language: 'es-ES',
+            rate: 1.2,
+            pitch: 1.0,
+          }).catch(() => {});
+
           onDoneRef.current();
         }
       }
@@ -81,8 +129,26 @@ export function useVoiceRecognition(
 
     Voice.onSpeechError = (e) => {
       console.log('[Voice] onSpeechError:', e);
-      setIsListening(false);
-      isListeningRef.current = false;
+      
+      // Algunos errores no son fatales y podemos reintentar
+      const errorCode = e?.error?.code || e?.code || '';
+      const isFatalError = errorCode === '7' || errorCode === 'permissions';
+      
+      if (isFatalError) {
+        console.log('[Voice] Error fatal, deteniendo reconocimiento');
+        setIsListening(false);
+        isListeningRef.current = false;
+      } else {
+        // Error no fatal, reintentar
+        console.log('[Voice] Error no fatal, reintentando...');
+        if (isListeningRef.current) {
+          setTimeout(() => {
+            Voice.start('es-ES').catch((err) => {
+              console.log('[Voice] Error al reintentar:', err);
+            });
+          }, 500);
+        }
+      }
     };
 
     Voice.onSpeechEnd = () => {
@@ -90,10 +156,12 @@ export function useVoiceRecognition(
       // Reiniciar automáticamente si todavía estamos en modo listening
       if (isListeningRef.current) {
         setTimeout(() => {
-          Voice.start('es-ES').catch((err) => {
-            console.log('[Voice] Error reiniciando:', err);
-          });
-        }, 100);
+          if (isListeningRef.current) { // Doble verificación
+            Voice.start('es-ES').catch((err) => {
+              console.log('[Voice] Error reiniciando en onSpeechEnd:', err);
+            });
+          }
+        }, 300);
       }
     };
 
@@ -159,8 +227,16 @@ export function useVoiceRecognition(
       return;
     }
 
+    // Si ya está escuchando, no iniciar de nuevo
+    if (isListeningRef.current) {
+      console.log('[Voice] Ya está escuchando, no reiniciar');
+      return;
+    }
+
     try {
       console.log('[Voice] Iniciando reconocimiento');
+      // Asegurarse de que no haya sesiones previas
+      await Voice.destroy().catch(() => {});
       await Voice.start('es-ES');
       setIsListening(true);
       isListeningRef.current = true;
@@ -169,6 +245,13 @@ export function useVoiceRecognition(
       console.log('[Voice] Error al iniciar:', error);
       setIsListening(false);
       isListeningRef.current = false;
+      
+      // Si el error es por permisos, actualizar disponibilidad
+      const errorMsg = String(error);
+      if (errorMsg.includes('permission') || errorMsg.includes('Permission')) {
+        console.log('[Voice] Error de permisos, marcando como no disponible');
+        setIsAvailable(false);
+      }
     }
   }, [isAvailable]);
 
