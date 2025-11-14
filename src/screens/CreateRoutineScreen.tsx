@@ -6,19 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
-import { Button, Card } from '../components';
+import { Button, Card, CustomAlert } from '../components';
 import { AddActivityModal } from '../components/AddActivityModal';
 import { Ionicons } from '@expo/vector-icons';
 import { Block, Activity, Routine } from '../types';
 import { generateId, formatTime } from '../utils/helpers';
 import { useRoutines } from '../hooks/useStorage';
+import { useCustomAlert } from '../hooks/useCustomAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateRoutine'>;
 
@@ -27,6 +27,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   const { saveRoutine, updateRoutine } = useRoutines();
   const insets = useSafeAreaInsets();
   const isEditMode = !!editingRoutine;
+  const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
 
   const [routineName, setRoutineName] = useState(editingRoutine?.name || '');
   const [blocks, setBlocks] = useState<Block[]>(
@@ -55,11 +56,11 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
   const handleDeleteBlock = (blockId: string) => {
     if (blocks.length === 1) {
-      Alert.alert('Error', 'Debe haber al menos un bloque');
+      showAlert('Error', 'Debe haber al menos un bloque', [], 'close-circle', theme.colors.error);
       return;
     }
 
-    Alert.alert('Eliminar Bloque', '¿Estás seguro?', [
+    showAlert('Eliminar Bloque', '¿Estás seguro?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -99,7 +100,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   };
 
   const handleDeleteActivity = (blockId: string, activityId: string) => {
-    Alert.alert('Eliminar Actividad', '¿Estás seguro?', [
+    showAlert('Eliminar Actividad', '¿Estás seguro?', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
@@ -122,13 +123,13 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
   const handleSaveRoutine = async () => {
     if (!routineName.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre para la rutina');
+      showAlert('Error', 'Por favor ingresa un nombre para la rutina', [], 'close-circle', theme.colors.error);
       return;
     }
 
     const hasActivities = blocks.some((block) => block.activities.length > 0);
     if (!hasActivities) {
-      Alert.alert('Error', 'Agrega al menos una actividad a la rutina');
+      showAlert('Error', 'Agrega al menos una actividad a la rutina', [], 'close-circle', theme.colors.error);
       return;
     }
 
@@ -142,12 +143,12 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
       await updateRoutine(updatedRoutine);
       setHasUnsavedChanges(false);
-      Alert.alert('Éxito', 'Rutina actualizada correctamente', [
+      showAlert('Éxito', 'Rutina actualizada correctamente', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
         },
-      ]);
+      ], 'checkmark-circle');
     } else {
       // Modo creación: crear nueva rutina
       const routine: Routine = {
@@ -159,12 +160,12 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
       await saveRoutine(routine);
       setHasUnsavedChanges(false);
-      Alert.alert('Éxito', 'Rutina guardada correctamente', [
+      showAlert('Éxito', 'Rutina guardada correctamente', [
         {
           text: 'OK',
           onPress: () => navigation.goBack(),
         },
-      ]);
+      ], 'checkmark-circle');
     }
   };
 
@@ -187,7 +188,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       e.preventDefault();
 
       // Mostrar alerta de confirmación
-      Alert.alert(
+      showAlert(
         'Descartar cambios',
         '¿Estás seguro que deseas salir? Los cambios no guardados se perderán.',
         [
@@ -200,8 +201,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
               navigation.dispatch(e.data.action);
             },
           },
-        ],
-        { cancelable: false }
+        ]
       );
     });
 
@@ -216,7 +216,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       }
 
       // Mostrar alerta de confirmación
-      Alert.alert(
+      showAlert(
         'Descartar cambios',
         '¿Estás seguro que deseas salir? Los cambios no guardados se perderán.',
         [
@@ -229,8 +229,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
               navigation.goBack();
             },
           },
-        ],
-        { cancelable: false }
+        ]
       );
 
       return true; // Prevenir comportamiento por defecto
@@ -375,6 +374,19 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
         onAdd={handleAddActivity}
         blockId={selectedBlockId}
       />
+
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={alertVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          buttons={alertConfig.buttons}
+          icon={alertConfig.icon}
+          iconColor={alertConfig.iconColor}
+          onDismiss={hideAlert}
+        />
+      )}
     </View>
   );
 }

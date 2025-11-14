@@ -5,19 +5,19 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
-import { Card } from '../components';
+import { Card, CustomAlert } from '../components';
 import { useWorkoutHistory } from '../hooks/useStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTimeLong } from '../utils/helpers';
 import { WorkoutSession } from '../types';
 import { importExportService } from '../services/importExport';
+import { useCustomAlert } from '../hooks/useCustomAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutHistory'>;
 
@@ -25,6 +25,7 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
   const { history, loading, deleteWorkout, refresh } = useWorkoutHistory();
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
+  const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -33,7 +34,7 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
   };
 
   const handleDeleteWorkout = (workout: WorkoutSession) => {
-    Alert.alert(
+    showAlert(
       'Eliminar Entrenamiento',
       `¿Estás seguro que deseas eliminar este entrenamiento?`,
       [
@@ -49,17 +50,17 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
 
   const handleExport = async () => {
     if (history.length === 0) {
-      Alert.alert('Sin historial', 'No hay entrenamientos para exportar');
+      showAlert('Sin historial', 'No hay entrenamientos para exportar', [], 'information-circle');
       return;
     }
 
     try {
       await importExportService.exportHistory(history);
-      Alert.alert('Éxito', 'Historial exportado correctamente');
+      showAlert('Éxito', 'Historial exportado correctamente', [], 'checkmark-circle');
     } catch (error) {
       console.error('Error al exportar historial:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      Alert.alert('Error', `No se pudo exportar el historial: ${errorMessage}`);
+      showAlert('Error', `No se pudo exportar el historial: ${errorMessage}`, [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -67,13 +68,13 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
     try {
       const result = await importExportService.importHistory();
       if (result.success) {
-        Alert.alert('Éxito', result.message);
+        showAlert('Éxito', result.message, [], 'checkmark-circle');
         await refresh();
       } else {
-        Alert.alert('Información', result.message);
+        showAlert('Información', result.message, [], 'information-circle');
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo importar el historial');
+      showAlert('Error', 'No se pudo importar el historial', [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -206,6 +207,19 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
           />
         }
       />
+
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={alertVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          buttons={alertConfig.buttons}
+          icon={alertConfig.icon}
+          iconColor={alertConfig.iconColor}
+          onDismiss={hideAlert}
+        />
+      )}
     </View>
   );
 }

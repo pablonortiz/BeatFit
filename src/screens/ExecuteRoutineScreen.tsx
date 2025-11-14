@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   Animated,
   Modal,
   ScrollView,
@@ -13,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
-import { Button } from '../components';
+import { Button, CustomAlert } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { Activity, Block, WorkoutSession } from '../types';
 import { formatTime, generateId, formatTimeLong } from '../utils/helpers';
@@ -21,6 +20,7 @@ import { notificationService } from '../services/notification';
 import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
 import { useWorkoutHistory } from '../hooks/useStorage';
 import { getBestTimeForRoutine } from '../utils/stats';
+import { useCustomAlert } from '../hooks/useCustomAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ExecuteRoutine'>;
 
@@ -28,6 +28,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const { routine } = route.params;
   const { saveWorkout, history } = useWorkoutHistory();
   const bestTime = getBestTimeForRoutine(routine.id, history);
+  const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
 
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [currentBlockRep, setCurrentBlockRep] = useState(0);
@@ -152,7 +153,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           // Guardar en el historial
           await saveCompletedWorkout();
 
-          Alert.alert(
+          showAlert(
             '¡Rutina Completada!',
             'Has terminado tu entrenamiento',
             [
@@ -160,7 +161,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                 text: 'Finalizar',
                 onPress: () => navigation.goBack(),
               },
-            ]
+            ],
+            'trophy'
           );
           return;
         }
@@ -198,7 +200,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       // Guardar en el historial
       await saveCompletedWorkout();
 
-      Alert.alert(
+      showAlert(
         '¡Rutina Completada!',
         'Has terminado tu entrenamiento',
         [
@@ -206,7 +208,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             text: 'Finalizar',
             onPress: () => navigation.goBack(),
           },
-        ]
+        ],
+        'trophy'
       );
       return;
     }
@@ -321,7 +324,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   };
 
   const handleStop = () => {
-    Alert.alert(
+    showAlert(
       'Detener Rutina',
       '¿Estás seguro que deseas detener la rutina?',
       [
@@ -643,6 +646,19 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           </View>
         </View>
       </Modal>
+
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={alertVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          buttons={alertConfig.buttons}
+          icon={alertConfig.icon}
+          iconColor={alertConfig.iconColor}
+          onDismiss={hideAlert}
+        />
+      )}
     </SafeAreaView>
   );
 }

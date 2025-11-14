@@ -6,7 +6,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   Modal,
   ScrollView,
@@ -15,13 +14,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
-import { Card, Button } from '../components';
+import { Card, Button, CustomAlert } from '../components';
 import { useRoutines, useWorkoutHistory } from '../hooks/useStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTimeLong, calculateRoutineDuration } from '../utils/helpers';
 import { Routine } from '../types';
 import { importExportService } from '../services/importExport';
 import { getRoutineStats } from '../utils/stats';
+import { useCustomAlert } from '../hooks/useCustomAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoutinesList'>;
 
@@ -32,6 +32,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedRoutines, setSelectedRoutines] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
+  const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -40,7 +41,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
   };
 
   const handleDeleteRoutine = (routine: Routine) => {
-    Alert.alert(
+    showAlert(
       'Eliminar Rutina',
       `¿Estás seguro que deseas eliminar "${routine.name}"?`,
       [
@@ -64,7 +65,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
 
   const handleExportPress = () => {
     if (routines.length === 0) {
-      Alert.alert('Sin rutinas', 'No hay rutinas para exportar');
+      showAlert('Sin rutinas', 'No hay rutinas para exportar', [], 'information-circle');
       return;
     }
     setShowExportModal(true);
@@ -74,17 +75,17 @@ export default function RoutinesListScreen({ navigation }: Props) {
     setShowExportModal(false);
     try {
       await importExportService.exportRoutines(routines);
-      Alert.alert('Éxito', 'Rutinas exportadas correctamente');
+      showAlert('Éxito', 'Rutinas exportadas correctamente', [], 'checkmark-circle');
     } catch (error) {
       console.error('Error al exportar rutinas:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      Alert.alert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`);
+      showAlert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`, [], 'close-circle', theme.colors.error);
     }
   };
 
   const handleExportSelected = async () => {
     if (selectedRoutines.size === 0) {
-      Alert.alert('Sin selección', 'Selecciona al menos una rutina para exportar');
+      showAlert('Sin selección', 'Selecciona al menos una rutina para exportar', [], 'information-circle');
       return;
     }
 
@@ -92,12 +93,12 @@ export default function RoutinesListScreen({ navigation }: Props) {
     try {
       const routinesToExport = routines.filter(r => selectedRoutines.has(r.id));
       await importExportService.exportRoutines(routinesToExport);
-      Alert.alert('Éxito', `${routinesToExport.length} rutina${routinesToExport.length !== 1 ? 's' : ''} exportada${routinesToExport.length !== 1 ? 's' : ''} correctamente`);
+      showAlert('Éxito', `${routinesToExport.length} rutina${routinesToExport.length !== 1 ? 's' : ''} exportada${routinesToExport.length !== 1 ? 's' : ''} correctamente`, [], 'checkmark-circle');
       setSelectedRoutines(new Set());
     } catch (error) {
       console.error('Error al exportar rutinas seleccionadas:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      Alert.alert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`);
+      showAlert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`, [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -105,13 +106,13 @@ export default function RoutinesListScreen({ navigation }: Props) {
     try {
       const result = await importExportService.importRoutines();
       if (result.success) {
-        Alert.alert('Éxito', result.message);
+        showAlert('Éxito', result.message, [], 'checkmark-circle');
         await refresh();
       } else {
-        Alert.alert('Información', result.message);
+        showAlert('Información', result.message, [], 'information-circle');
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron importar las rutinas');
+      showAlert('Error', 'No se pudieron importar las rutinas', [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -329,6 +330,19 @@ export default function RoutinesListScreen({ navigation }: Props) {
           </View>
         </View>
       </Modal>
+
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={alertVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          buttons={alertConfig.buttons}
+          icon={alertConfig.icon}
+          iconColor={alertConfig.iconColor}
+          onDismiss={hideAlert}
+        />
+      )}
     </View>
   );
 }
