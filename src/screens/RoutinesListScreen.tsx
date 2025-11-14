@@ -1,4 +1,5 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -75,7 +76,9 @@ export default function RoutinesListScreen({ navigation }: Props) {
       await importExportService.exportRoutines(routines);
       Alert.alert('Éxito', 'Rutinas exportadas correctamente');
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron exportar las rutinas');
+      console.error('Error al exportar rutinas:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      Alert.alert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`);
     }
   };
 
@@ -92,7 +95,9 @@ export default function RoutinesListScreen({ navigation }: Props) {
       Alert.alert('Éxito', `${routinesToExport.length} rutina${routinesToExport.length !== 1 ? 's' : ''} exportada${routinesToExport.length !== 1 ? 's' : ''} correctamente`);
       setSelectedRoutines(new Set());
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron exportar las rutinas');
+      console.error('Error al exportar rutinas seleccionadas:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      Alert.alert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`);
     }
   };
 
@@ -127,6 +132,13 @@ export default function RoutinesListScreen({ navigation }: Props) {
   const deselectAllRoutines = () => {
     setSelectedRoutines(new Set());
   };
+
+  // Refrescar cuando la pantalla recupera el foco (vuelve de editar)
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   // Agregar botones de import/export en el header
   useLayoutEffect(() => {

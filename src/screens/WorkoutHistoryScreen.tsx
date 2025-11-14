@@ -57,7 +57,9 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
       await importExportService.exportHistory(history);
       Alert.alert('Éxito', 'Historial exportado correctamente');
     } catch (error) {
-      Alert.alert('Error', 'No se pudo exportar el historial');
+      console.error('Error al exportar historial:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      Alert.alert('Error', `No se pudo exportar el historial: ${errorMessage}`);
     }
   };
 

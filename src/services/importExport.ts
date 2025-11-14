@@ -9,46 +9,80 @@ class ImportExportService {
    * Exportar rutinas a archivo JSON
    */
   async exportRoutines(routines: Routine[], filename?: string): Promise<void> {
-    const timestamp = new Date().toISOString().split('T')[0];
-    const fileName = filename || `rutinas_${timestamp}.json`;
-    const fileUri = FileSystem.documentDirectory + fileName;
+    try {
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = filename || `rutinas_${timestamp}.json`;
+      const fileUri = FileSystem.documentDirectory + fileName;
 
-    const data = {
-      version: '1.0',
-      exportDate: new Date().toISOString(),
-      type: 'routines',
-      routines,
-    };
+      const data = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        type: 'routines',
+        routines,
+      };
 
-    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
-    await Sharing.shareAsync(fileUri, {
-      mimeType: 'application/json',
-      dialogTitle: 'Exportar Rutinas',
-      UTI: 'public.json',
-    });
+      console.log('[Export] Escribiendo archivo en:', fileUri);
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+      console.log('[Export] Archivo escrito exitosamente');
+
+      // Verificar si sharing está disponible
+      const isAvailable = await Sharing.isAvailableAsync();
+      console.log('[Export] Sharing disponible:', isAvailable);
+
+      if (!isAvailable) {
+        throw new Error('La funcionalidad de compartir no está disponible en este dispositivo');
+      }
+
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/json',
+        dialogTitle: 'Exportar Rutinas',
+        UTI: 'public.json',
+      });
+      console.log('[Export] Compartido exitosamente');
+    } catch (error) {
+      console.error('[Export] Error exportando rutinas:', error);
+      throw error;
+    }
   }
 
   /**
    * Exportar historial de entrenamientos a archivo JSON
    */
   async exportHistory(history: WorkoutSession[], filename?: string): Promise<void> {
-    const timestamp = new Date().toISOString().split('T')[0];
-    const fileName = filename || `historial_${timestamp}.json`;
-    const fileUri = FileSystem.documentDirectory + fileName;
+    try {
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = filename || `historial_${timestamp}.json`;
+      const fileUri = FileSystem.documentDirectory + fileName;
 
-    const data = {
-      version: '1.0',
-      exportDate: new Date().toISOString(),
-      type: 'history',
-      history,
-    };
+      const data = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        type: 'history',
+        history,
+      };
 
-    await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
-    await Sharing.shareAsync(fileUri, {
-      mimeType: 'application/json',
-      dialogTitle: 'Exportar Historial',
-      UTI: 'public.json',
-    });
+      console.log('[Export] Escribiendo historial en:', fileUri);
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(data, null, 2));
+      console.log('[Export] Historial escrito exitosamente');
+
+      // Verificar si sharing está disponible
+      const isAvailable = await Sharing.isAvailableAsync();
+      console.log('[Export] Sharing disponible:', isAvailable);
+
+      if (!isAvailable) {
+        throw new Error('La funcionalidad de compartir no está disponible en este dispositivo');
+      }
+
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'application/json',
+        dialogTitle: 'Exportar Historial',
+        UTI: 'public.json',
+      });
+      console.log('[Export] Historial compartido exitosamente');
+    } catch (error) {
+      console.error('[Export] Error exportando historial:', error);
+      throw error;
+    }
   }
 
   /**
