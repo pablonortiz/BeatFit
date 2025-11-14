@@ -16,6 +16,7 @@ import { ExerciseTemplate } from '../types';
 import * as Haptics from 'expo-haptics';
 import { CustomAlert } from '../components';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import { useTranslation } from 'react-i18next';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageExercises'>;
 
@@ -24,6 +25,7 @@ export default function ManageExercisesScreen({ navigation }: Props) {
   const { routines } = useRoutines();
   const insets = useSafeAreaInsets();
   const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
+  const { t } = useTranslation();
 
   // Calcular qué ejercicios están en uso
   const exercisesInUse = useMemo(() => {
@@ -59,9 +61,9 @@ export default function ManageExercisesScreen({ navigation }: Props) {
     if (exercisesInUse.has(exercise.id)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       showAlert(
-        'No se puede eliminar',
-        'Este ejercicio está siendo usado en una o más rutinas. Elimina esas rutinas primero.',
-        [{ text: 'Entendido' }],
+        t('exercises.cannotDelete'),
+        t('exercises.cannotDeleteMessage'),
+        [{ text: t('common.ok') }],
         'alert-circle',
         theme.colors.warning
       );
@@ -70,16 +72,16 @@ export default function ManageExercisesScreen({ navigation }: Props) {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     showAlert(
-      'Eliminar Ejercicio',
-      `¿Estás seguro que deseas eliminar "${exercise.name}"?`,
+      t('exercises.deleteExercise'),
+      t('exercises.deleteConfirm', { name: exercise.name }),
       [
         {
-          text: 'Cancelar',
+          text: t('common.cancel'),
           style: 'cancel',
           onPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
         },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await deleteExercise(exercise.id);
@@ -104,11 +106,11 @@ export default function ManageExercisesScreen({ navigation }: Props) {
           {isInUse && (
             <View style={styles.inUseBadge}>
               <Ionicons name="link" size={14} color={theme.colors.info} />
-              <Text style={styles.inUseText}>En uso</Text>
+              <Text style={styles.inUseText}>{t('exercises.inUse')}</Text>
             </View>
           )}
           {!isInUse && (
-            <Text style={styles.notInUseText}>No usado en ninguna rutina</Text>
+            <Text style={styles.notInUseText}>{t('exercises.notInUse')}</Text>
           )}
         </View>
 
@@ -131,18 +133,18 @@ export default function ManageExercisesScreen({ navigation }: Props) {
       {exercises.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="barbell-outline" size={80} color={theme.colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No hay ejercicios guardados</Text>
+          <Text style={styles.emptyTitle}>{t('exercises.noExercises')}</Text>
           <Text style={styles.emptyText}>
-            Los ejercicios que crees se guardarán aquí automáticamente
+            {t('exercises.noExercisesDescription')}
           </Text>
         </View>
       ) : (
         <>
           <View style={styles.header}>
-            <Text style={styles.title}>Ejercicios Guardados</Text>
+            <Text style={styles.title}>{t('exercises.savedExercises')}</Text>
             <Text style={styles.subtitle}>
-              {exercises.length} ejercicio{exercises.length !== 1 ? 's' : ''} •{' '}
-              {exercisesInUse.size} en uso
+              {t('exercises.exercisesCount', { count: exercises.length })} •{' '}
+              {t('exercises.inUseCount', { count: exercisesInUse.size })}
             </Text>
           </View>
 

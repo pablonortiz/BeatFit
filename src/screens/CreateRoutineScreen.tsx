@@ -23,6 +23,7 @@ import DraggableFlatList, {
   RenderItemParams,
 } from "react-native-draggable-flatlist";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useTranslation } from "react-i18next";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreateRoutine">;
 
@@ -31,6 +32,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   const { saveRoutine, updateRoutine } = useRoutines();
   const insets = useSafeAreaInsets();
   const isEditMode = !!editingRoutine;
+  const { t } = useTranslation();
   const {
     alertConfig,
     visible: alertVisible,
@@ -43,7 +45,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     editingRoutine?.blocks || [
       {
         id: generateId(),
-        name: "Bloque 1",
+        name: t("createRoutine.block") + " 1",
         activities: [],
         repetitions: 1,
         type: "normal",
@@ -75,7 +77,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       );
       const newBlock: Block = {
         id: generateId(),
-        name: `Bloque ${normalBlocks.length + 1}`,
+        name: `${t("createRoutine.block")} ${normalBlocks.length + 1}`,
         activities: [],
         repetitions: 1,
         type: "normal",
@@ -98,7 +100,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
     const warmupBlock: Block = {
       id: generateId(),
-      name: "Calentamiento",
+      name: t("createRoutine.warmup"),
       activities: [],
       repetitions: 1,
       type: "warmup",
@@ -113,7 +115,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
     const cooldownBlock: Block = {
       id: generateId(),
-      name: "Elongación",
+      name: t("createRoutine.cooldown"),
       activities: [],
       repetitions: 1,
       type: "cooldown",
@@ -126,7 +128,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   const handleAddRestBlock = useCallback((afterBlockId: string) => {
     const restBlock: Block = {
       id: generateId(),
-      name: "Descanso entre bloques",
+      name: t("createRoutine.restBetweenBlocks"),
       activities: [],
       repetitions: 1,
       type: "rest-block",
@@ -146,8 +148,8 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   const handleDeleteBlock = (blockId: string) => {
     if (blocks.length === 1) {
       showAlert(
-        "Error",
-        "Debe haber al menos un bloque",
+        t("common.error"),
+        t("createRoutine.errorAtLeastOneBlock"),
         [],
         "close-circle",
         theme.colors.error,
@@ -155,16 +157,20 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       return;
     }
 
-    showAlert("Eliminar Bloque", "¿Estás seguro?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: () => {
-          setBlocks(blocks.filter((b) => b.id !== blockId));
+    showAlert(
+      t("createRoutine.deleteBlock"),
+      t("createRoutine.deleteBlockConfirm"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () => {
+            setBlocks(blocks.filter((b) => b.id !== blockId));
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleUpdateBlockName = (blockId: string, name: string) => {
@@ -195,27 +201,31 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   };
 
   const handleDeleteActivity = (blockId: string, activityId: string) => {
-    showAlert("Eliminar Actividad", "¿Estás seguro?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: () => {
-          setBlocks(
-            blocks.map((block) =>
-              block.id === blockId
-                ? {
-                    ...block,
-                    activities: block.activities.filter(
-                      (a) => a.id !== activityId,
-                    ),
-                  }
-                : block,
-            ),
-          );
+    showAlert(
+      t("createRoutine.deleteActivity"),
+      t("createRoutine.deleteActivityConfirm"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: () => {
+            setBlocks(
+              blocks.map((block) =>
+                block.id === blockId
+                  ? {
+                      ...block,
+                      activities: block.activities.filter(
+                        (a) => a.id !== activityId,
+                      ),
+                    }
+                  : block,
+              ),
+            );
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const handleEditActivity = (blockId: string, activity: Activity) => {
@@ -301,8 +311,8 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
   const handleSaveRoutine = async () => {
     if (!routineName.trim()) {
       showAlert(
-        "Error",
-        "Por favor ingresa un nombre para la rutina",
+        t("common.error"),
+        t("createRoutine.errorNameRequired"),
         [],
         "close-circle",
         theme.colors.error,
@@ -315,10 +325,8 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     if (emptyBlocks.length > 0) {
       const blockNames = emptyBlocks.map((b) => `"${b.name}"`).join(", ");
       showAlert(
-        "Bloques vacíos",
-        emptyBlocks.length === 1
-          ? `El bloque ${blockNames} está vacío. Agrega al menos una actividad o elimínalo.`
-          : `Los bloques ${blockNames} están vacíos. Agrega actividades o elimínalos.`,
+        t("createRoutine.errorEmptyBlocks"),
+        t("createRoutine.errorEmptyBlocksMessage"),
         [],
         "alert-circle",
         theme.colors.warning,
@@ -329,8 +337,8 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     const hasActivities = blocks.some((block) => block.activities.length > 0);
     if (!hasActivities) {
       showAlert(
-        "Error",
-        "Agrega al menos una actividad a la rutina",
+        t("common.error"),
+        t("createRoutine.errorNoActivities"),
         [],
         "close-circle",
         theme.colors.error,
@@ -349,11 +357,11 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       await updateRoutine(updatedRoutine);
       setHasUnsavedChanges(false);
       showAlert(
-        "Éxito",
-        "Rutina actualizada correctamente",
+        t("common.success"),
+        t("createRoutine.successUpdated"),
         [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => navigation.goBack(),
           },
         ],
@@ -371,11 +379,11 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       await saveRoutine(routine);
       setHasUnsavedChanges(false);
       showAlert(
-        "Éxito",
-        "Rutina guardada correctamente",
+        t("common.success"),
+        t("createRoutine.successSaved"),
         [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => navigation.goBack(),
           },
         ],
@@ -404,12 +412,12 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
       // Mostrar alerta de confirmación
       showAlert(
-        "Descartar cambios",
-        "¿Estás seguro que deseas salir? Los cambios no guardados se perderán.",
+        t("createRoutine.discardChanges"),
+        t("createRoutine.discardMessage"),
         [
-          { text: "Cancelar", style: "cancel", onPress: () => null },
+          { text: t("common.cancel"), style: "cancel", onPress: () => null },
           {
-            text: "Descartar",
+            text: t("common.discard"),
             style: "destructive",
             onPress: () => {
               setHasUnsavedChanges(false);
@@ -437,12 +445,12 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
         // Mostrar alerta de confirmación
         showAlert(
-          "Descartar cambios",
-          "¿Estás seguro que deseas salir? Los cambios no guardados se perderán.",
+          t("createRoutine.discardChanges"),
+          t("createRoutine.discardMessage"),
           [
-            { text: "Cancelar", style: "cancel", onPress: () => null },
+            { text: t("common.cancel"), style: "cancel", onPress: () => null },
             {
-              text: "Descartar",
+              text: t("common.discard"),
               style: "destructive",
               onPress: () => {
                 setHasUnsavedChanges(false);
@@ -570,7 +578,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                 style={styles.blockNameInput}
                 value={block.name}
                 onChangeText={(text) => handleUpdateBlockName(block.id, text)}
-                placeholder="Nombre del bloque"
+                placeholder={t("createRoutine.blockNamePlaceholder")}
                 placeholderTextColor={theme.colors.textTertiary}
               />
               <TouchableOpacity onPress={() => handleDeleteBlock(block.id)}>
@@ -591,14 +599,16 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                   color={theme.colors.warning}
                 />
                 <Text style={styles.emptyBlockText}>
-                  Este bloque necesita al menos una actividad
+                  {t("createRoutine.blockNeedsActivity")}
                 </Text>
               </View>
             )}
 
             {/* Repeticiones */}
             <View style={styles.repetitionsRow}>
-              <Text style={styles.label}>Repeticiones del bloque:</Text>
+              <Text style={styles.label}>
+                {t("createRoutine.blockRepetitions")}
+              </Text>
               <View style={styles.counter}>
                 <TouchableOpacity
                   onPress={() =>
@@ -648,7 +658,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
             )}
 
             <Button
-              title="+ Agregar Actividad"
+              title={t("createRoutine.addActivity")}
               onPress={() => {
                 setSelectedBlockId(block.id);
                 setShowAddActivity(true);
@@ -673,7 +683,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                   color={theme.colors.rest}
                 />
                 <Text style={styles.addRestBlockText}>
-                  Agregar descanso aquí
+                  {t("createRoutine.addRestBlock")}
                 </Text>
               </View>
               <View style={styles.addRestBlockLine} />
@@ -793,7 +803,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
         )}
 
         <Button
-          title="+ Agregar Actividad"
+          title={t("createRoutine.addActivity")}
           onPress={() => {
             setSelectedBlockId(block.id);
             setShowAddActivity(true);
@@ -819,12 +829,12 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     () => (
       <>
         <View style={styles.nameSection}>
-          <Text style={styles.label}>Nombre de la rutina</Text>
+          <Text style={styles.label}>{t("createRoutine.routineName")}</Text>
           <TextInput
             style={styles.nameInput}
             value={routineName}
             onChangeText={setRoutineName}
-            placeholder="Mi Rutina de Entrenamiento"
+            placeholder={t("createRoutine.routineNamePlaceholder")}
             placeholderTextColor={theme.colors.textTertiary}
           />
         </View>
@@ -832,7 +842,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
         {/* Botones de bloques especiales */}
         <View style={styles.specialBlocksSection}>
           <Text style={styles.specialBlocksTitle}>
-            Bloques Especiales (Opcionales)
+            {t("createRoutine.specialBlocksOptional")}
           </Text>
           <View style={styles.specialBlocksButtons}>
             <TouchableOpacity
@@ -862,7 +872,9 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                   },
                 ]}
               >
-                {hasWarmupBlock ? "✓ Calentamiento" : "+ Calentamiento"}
+                {hasWarmupBlock
+                  ? `✓ ${t("createRoutine.warmup")}`
+                  : `+ ${t("createRoutine.warmup")}`}
               </Text>
             </TouchableOpacity>
 
@@ -893,7 +905,9 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                   },
                 ]}
               >
-                {hasCooldownBlock ? "✓ Elongación" : "+ Elongación"}
+                {hasCooldownBlock
+                  ? `✓ ${t("createRoutine.cooldown")}`
+                  : `+ ${t("createRoutine.cooldown")}`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -921,7 +935,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
         <View style={{ paddingBottom: insets.bottom + 160 }}>
           <Button
-            title="+ Agregar Bloque"
+            title={t("createRoutine.addBlock")}
             onPress={handleAddBlock}
             variant="ghost"
             size="medium"
@@ -954,7 +968,11 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
           ]}
         >
           <Button
-            title={isEditMode ? "Actualizar Rutina" : "Guardar Rutina"}
+            title={
+              isEditMode
+                ? t("createRoutine.updateRoutine")
+                : t("createRoutine.saveRoutine")
+            }
             onPress={handleSaveRoutine}
             variant="primary"
             size="large"

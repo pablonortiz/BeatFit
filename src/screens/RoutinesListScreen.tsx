@@ -22,6 +22,7 @@ import { Routine } from '../types';
 import { importExportService } from '../services/importExport';
 import { getRoutineStats } from '../utils/stats';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import { useTranslation } from 'react-i18next';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RoutinesList'>;
 
@@ -33,6 +34,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
   const [selectedRoutines, setSelectedRoutines] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
   const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
+  const { t } = useTranslation();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -42,12 +44,12 @@ export default function RoutinesListScreen({ navigation }: Props) {
 
   const handleDeleteRoutine = (routine: Routine) => {
     showAlert(
-      'Eliminar Rutina',
-      `¿Estás seguro que deseas eliminar "${routine.name}"?`,
+      t('routines.deleteRoutine'),
+      `${t('routines.deleteConfirm')} "${routine.name}"?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => deleteRoutine(routine.id),
         },
@@ -65,7 +67,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
 
   const handleExportPress = () => {
     if (routines.length === 0) {
-      showAlert('Sin rutinas', 'No hay rutinas para exportar', [], 'information-circle');
+      showAlert(t('importExport.noData'), t('importExport.noData'), [], 'information-circle');
       return;
     }
     setShowExportModal(true);
@@ -75,17 +77,17 @@ export default function RoutinesListScreen({ navigation }: Props) {
     setShowExportModal(false);
     try {
       await importExportService.exportRoutines(routines);
-      showAlert('Éxito', 'Rutinas exportadas correctamente', [], 'checkmark-circle');
+      showAlert(t('importExport.exportSuccess'), t('importExport.exportSuccess'), [], 'checkmark-circle');
     } catch (error) {
       console.error('Error al exportar rutinas:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showAlert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`, [], 'close-circle', theme.colors.error);
+      const errorMessage = error instanceof Error ? error.message : t('errors.generic');
+      showAlert(t('importExport.exportError'), `${t('importExport.exportError')}: ${errorMessage}`, [], 'close-circle', theme.colors.error);
     }
   };
 
   const handleExportSelected = async () => {
     if (selectedRoutines.size === 0) {
-      showAlert('Sin selección', 'Selecciona al menos una rutina para exportar', [], 'information-circle');
+      showAlert(t('importExport.noData'), t('importExport.noData'), [], 'information-circle');
       return;
     }
 
@@ -93,12 +95,12 @@ export default function RoutinesListScreen({ navigation }: Props) {
     try {
       const routinesToExport = routines.filter(r => selectedRoutines.has(r.id));
       await importExportService.exportRoutines(routinesToExport);
-      showAlert('Éxito', `${routinesToExport.length} rutina${routinesToExport.length !== 1 ? 's' : ''} exportada${routinesToExport.length !== 1 ? 's' : ''} correctamente`, [], 'checkmark-circle');
+      showAlert(t('importExport.exportSuccess'), t('importExport.exportSuccess'), [], 'checkmark-circle');
       setSelectedRoutines(new Set());
     } catch (error) {
       console.error('Error al exportar rutinas seleccionadas:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showAlert('Error', `No se pudieron exportar las rutinas: ${errorMessage}`, [], 'close-circle', theme.colors.error);
+      const errorMessage = error instanceof Error ? error.message : t('errors.generic');
+      showAlert(t('importExport.exportError'), `${t('importExport.exportError')}: ${errorMessage}`, [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -106,13 +108,16 @@ export default function RoutinesListScreen({ navigation }: Props) {
     try {
       const result = await importExportService.importRoutines();
       if (result.success) {
-        showAlert('Éxito', result.message, [], 'checkmark-circle');
+        showAlert(t('importExport.importSuccess'), result.message, [], 'checkmark-circle');
         await refresh();
       } else {
-        showAlert('Información', result.message, [], 'information-circle');
+        const message = result.message === 'Importación cancelada' 
+          ? t('importExport.importCanceled')
+          : result.message;
+        showAlert(t('common.info'), message, [], 'information-circle');
       }
     } catch (error) {
-      showAlert('Error', 'No se pudieron importar las rutinas', [], 'close-circle', theme.colors.error);
+      showAlert(t('importExport.importError'), t('importExport.importError'), [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -182,16 +187,16 @@ export default function RoutinesListScreen({ navigation }: Props) {
               <View style={styles.stat}>
                 <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.statText}>
-                  {totalDuration > 0 ? formatTimeLong(totalDuration) : 'Variable'}
+                  {totalDuration > 0 ? formatTimeLong(totalDuration) : t('routines.variable')}
                 </Text>
               </View>
               <View style={styles.stat}>
                 <Ionicons name="list" size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.statText}>{item.blocks.length} bloques</Text>
+                <Text style={styles.statText}>{t('routines.blocks', { count: item.blocks.length })}</Text>
               </View>
               <View style={styles.stat}>
                 <Ionicons name="fitness" size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.statText}>{totalActivities} ejercicios</Text>
+                <Text style={styles.statText}>{t('routines.activities', { count: totalActivities })}</Text>
               </View>
             </View>
           </View>
@@ -205,14 +210,14 @@ export default function RoutinesListScreen({ navigation }: Props) {
 
         <View style={styles.actions}>
           <Button
-            title="Editar"
+            title={t('common.edit')}
             onPress={() => handleEditRoutine(item)}
             variant="outline"
             size="small"
             style={styles.actionButton}
           />
           <Button
-            title="Comenzar"
+            title={t('routines.start')}
             onPress={() => handleStartRoutine(item)}
             variant="primary"
             size="small"
@@ -227,12 +232,12 @@ export default function RoutinesListScreen({ navigation }: Props) {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="folder-open-outline" size={80} color={theme.colors.textTertiary} />
-        <Text style={styles.emptyTitle}>No hay rutinas guardadas</Text>
+        <Text style={styles.emptyTitle}>{t('routines.noRoutines')}</Text>
         <Text style={styles.emptyText}>
-          Crea tu primera rutina para comenzar a entrenar
+          {t('routines.noRoutinesDescription')}
         </Text>
         <Button
-          title="Crear Rutina"
+          title={t('routines.createRoutine')}
           onPress={() => navigation.navigate('CreateRoutine', {})}
           style={styles.createButton}
         />
@@ -266,7 +271,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Exportar Rutinas</Text>
+              <Text style={styles.modalTitle}>{t('importExport.exportRoutines')}</Text>
               <TouchableOpacity onPress={() => setShowExportModal(false)}>
                 <Ionicons name="close" size={28} color={theme.colors.textPrimary} />
               </TouchableOpacity>
@@ -274,18 +279,18 @@ export default function RoutinesListScreen({ navigation }: Props) {
 
             <ScrollView style={styles.modalScroll}>
               <Text style={styles.modalDescription}>
-                Selecciona las rutinas que deseas exportar o exporta todas
+                {t('importExport.exportRoutinesSelectDesc')}
               </Text>
 
               <View style={styles.selectionButtons}>
                 <Button
-                  title="Seleccionar Todas"
+                  title={t('importExport.selectAll')}
                   onPress={selectAllRoutines}
                   variant="ghost"
                   size="small"
                 />
                 <Button
-                  title="Deseleccionar"
+                  title={t('importExport.deselectAll')}
                   onPress={deselectAllRoutines}
                   variant="ghost"
                   size="small"
@@ -305,7 +310,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
                   </View>
                   <Text style={styles.routineSelectName}>{routine.name}</Text>
                   <Text style={styles.routineSelectInfo}>
-                    {routine.blocks.length} bloques
+                    {t('routines.blocks', { count: routine.blocks.length })}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -313,14 +318,14 @@ export default function RoutinesListScreen({ navigation }: Props) {
 
             <View style={styles.modalActions}>
               <Button
-                title="Exportar Todas"
+                title={t('importExport.exportAll')}
                 onPress={handleExportAll}
                 variant="outline"
                 size="medium"
                 style={{ flex: 1 }}
               />
               <Button
-                title={`Exportar ${selectedRoutines.size > 0 ? `(${selectedRoutines.size})` : 'Seleccionadas'}`}
+                title={t('importExport.exportSelected', { count: selectedRoutines.size })}
                 onPress={handleExportSelected}
                 variant="primary"
                 size="medium"

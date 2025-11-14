@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Activity, ExerciseType } from '../types';
 import { theme } from '../theme';
 import { Button } from './Button';
+import { useTranslation } from 'react-i18next';
 
 interface EditActivityModalProps {
   visible: boolean;
@@ -26,6 +27,7 @@ export function EditActivityModal({
   onClose,
   onSave,
 }: EditActivityModalProps) {
+  const { t } = useTranslation();
   const [exerciseType, setExerciseType] = useState<ExerciseType>('time');
   const [duration, setDuration] = useState('30');
   const [reps, setReps] = useState('10');
@@ -172,13 +174,13 @@ export function EditActivityModal({
 
           <View style={styles.modalActions}>
             <Button
-              title="Cancelar"
+              title={t("common.cancel")}
               onPress={onClose}
               variant="outline"
               style={styles.actionButton}
             />
             <Button
-              title="Guardar"
+              title={t("common.save")}
               onPress={handleSave}
               variant="primary"
               style={styles.actionButton}

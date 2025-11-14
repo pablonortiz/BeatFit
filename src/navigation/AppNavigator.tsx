@@ -3,6 +3,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import { theme } from '../theme';
+import { useTranslation } from 'react-i18next';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
@@ -13,6 +14,7 @@ import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
 import WorkoutDetailScreen from '../screens/WorkoutDetailScreen';
 import StatsScreen from '../screens/StatsScreen';
 import ManageExercisesScreen from '../screens/ManageExercisesScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -30,67 +32,80 @@ const navigationTheme = {
   },
 };
 
+function Navigator() {
+  const { t } = useTranslation();
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: theme.colors.background,
+        },
+        headerTintColor: theme.colors.textPrimary,
+        headerTitleStyle: {
+          fontSize: 22,
+          fontWeight: '600',
+        },
+        contentStyle: {
+          backgroundColor: theme.colors.background,
+        },
+        animation: 'fade',
+        animationDuration: 150,
+      }}
+    >
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="RoutinesList"
+        component={RoutinesListScreen}
+        options={{ title: t('routines.title') }}
+      />
+      <Stack.Screen
+        name="CreateRoutine"
+        component={CreateRoutineScreen}
+        options={{ title: t('createRoutine.title') }}
+      />
+      <Stack.Screen
+        name="ExecuteRoutine"
+        component={ExecuteRoutineScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="WorkoutHistory"
+        component={WorkoutHistoryScreen}
+        options={{ title: t('history.title') }}
+      />
+      <Stack.Screen
+        name="WorkoutDetail"
+        component={WorkoutDetailScreen}
+        options={{ title: t('workoutDetail.title') }}
+      />
+      <Stack.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{ title: t('stats.title') }}
+      />
+      <Stack.Screen
+        name="ManageExercises"
+        component={ManageExercisesScreen}
+        options={{ title: t('exercises.title') }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: t('settings.title') }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 export function AppNavigator() {
   return (
     <NavigationContainer theme={navigationTheme}>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.textPrimary,
-          headerTitleStyle: {
-            fontSize: 22,
-            fontWeight: '600',
-          },
-          contentStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          animation: 'fade',
-          animationDuration: 150,
-        }}
-      >
-        <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="RoutinesList"
-          component={RoutinesListScreen}
-          options={{ title: 'Mis Rutinas' }}
-        />
-        <Stack.Screen
-          name="CreateRoutine"
-          component={CreateRoutineScreen}
-          options={{ title: 'Crear Rutina' }}
-        />
-        <Stack.Screen
-          name="ExecuteRoutine"
-          component={ExecuteRoutineScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="WorkoutHistory"
-          component={WorkoutHistoryScreen}
-          options={{ title: 'Historial' }}
-        />
-        <Stack.Screen
-          name="WorkoutDetail"
-          component={WorkoutDetailScreen}
-          options={{ title: 'Detalle del Entrenamiento' }}
-        />
-        <Stack.Screen
-          name="Stats"
-          component={StatsScreen}
-          options={{ title: 'Estadísticas' }}
-        />
-        <Stack.Screen
-          name="ManageExercises"
-          component={ManageExercisesScreen}
-          options={{ title: 'Gestionar Ejercicios' }}
-        />
-      </Stack.Navigator>
+      <Navigator />
     </NavigationContainer>
   );
 }

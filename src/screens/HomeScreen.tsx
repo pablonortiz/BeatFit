@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -6,44 +6,55 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
-import { theme } from '../theme';
-import { Button, Card } from '../components';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types";
+import { theme } from "../theme";
+import { Button, Card } from "../components";
+import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+type Props = NativeStackScreenProps<RootStackParamList, "Home">;
 
 export default function HomeScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.background} />
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={theme.colors.background}
+      />
 
       <View style={styles.header}>
-        <Text style={styles.logo}>BeatFit</Text>
-        <Text style={styles.subtitle}>Tu entrenador personal</Text>
+        <Text style={styles.logo}>{t("home.title")}</Text>
+        <Text style={styles.subtitle}>{t("home.subtitle")}</Text>
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 20 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Card style={styles.modeCard}>
           <View style={styles.iconContainer}>
             <Ionicons name="list" size={40} color={theme.colors.primary} />
           </View>
-          <Text style={styles.modeTitle}>Crear Nueva Rutina</Text>
+          <Text style={styles.modeTitle}>{t("home.createRoutine")}</Text>
           <Text style={styles.modeDescription}>
-            Arma tu rutina de principio a fin con bloques y repeticiones
+            {t("home.createRoutineDesc")}
           </Text>
           <Button
-            title="Crear Rutina"
-            onPress={() => navigation.navigate('CreateRoutine', {})}
+            title={t("home.createRoutine")}
+            onPress={() => navigation.navigate("CreateRoutine", {})}
             variant="primary"
             fullWidth
             style={styles.modeButton}
@@ -53,36 +64,58 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('RoutinesList')}
+            onPress={() => navigation.navigate("RoutinesList")}
           >
-            <Ionicons name="folder-open" size={32} color={theme.colors.secondary} />
-            <Text style={styles.actionText}>Mis Rutinas</Text>
+            <Ionicons
+              name="folder-open"
+              size={32}
+              color={theme.colors.secondary}
+            />
+            <Text style={styles.actionText}>{t("home.myRoutines")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('WorkoutHistory')}
+            onPress={() => navigation.navigate("WorkoutHistory")}
           >
             <Ionicons name="calendar" size={32} color={theme.colors.accent} />
-            <Text style={styles.actionText}>Historial</Text>
+            <Text style={styles.actionText}>{t("home.workoutHistory")}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('Stats')}
+            onPress={() => navigation.navigate("Stats")}
           >
-            <Ionicons name="stats-chart" size={32} color={theme.colors.primary} />
-            <Text style={styles.actionText}>Estadísticas</Text>
+            <Ionicons
+              name="stats-chart"
+              size={32}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.actionText}>{t("stats.title")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => navigation.navigate('ManageExercises')}
+            onPress={() => navigation.navigate("ManageExercises")}
           >
             <Ionicons name="barbell" size={32} color={theme.colors.success} />
-            <Text style={styles.actionText}>Ejercicios</Text>
+            <Text style={styles.actionText}>{t("home.manageExercises")}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => navigation.navigate("Settings")}
+          >
+            <Ionicons
+              name="settings"
+              size={32}
+              color={theme.colors.textSecondary}
+            />
+            <Text style={styles.actionText}>{t("home.settings")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -102,7 +135,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
     paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   logo: {
     ...theme.typography.h1,
@@ -119,7 +152,7 @@ const styles = StyleSheet.create({
   },
   modeCard: {
     marginBottom: theme.spacing.md,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: theme.spacing.lg,
   },
   iconContainer: {
@@ -127,8 +160,8 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: theme.borderRadius.lg,
     backgroundColor: theme.colors.backgroundCardLight,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: theme.spacing.sm,
   },
   modeTitle: {
@@ -137,7 +170,7 @@ const styles = StyleSheet.create({
   },
   modeDescription: {
     ...theme.typography.bodySmall,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: theme.spacing.md,
     color: theme.colors.textSecondary,
   },
@@ -145,7 +178,7 @@ const styles = StyleSheet.create({
     minWidth: 200,
   },
   actionsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: theme.spacing.md,
     marginTop: theme.spacing.md,
   },
@@ -155,7 +188,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     paddingVertical: theme.spacing.lg,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -165,7 +198,7 @@ const styles = StyleSheet.create({
   actionText: {
     ...theme.typography.bodySmall,
     marginTop: theme.spacing.sm,
-    textAlign: 'center',
+    textAlign: "center",
   },
   actionTextDisabled: {
     color: theme.colors.textDisabled,
@@ -174,6 +207,6 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
     marginTop: theme.spacing.xs,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
 });

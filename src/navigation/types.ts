@@ -10,4 +10,5 @@ export type RootStackParamList = {
   WorkoutHistory: undefined;
   WorkoutDetail: { workout: WorkoutSession };
   Stats: undefined;
+  Settings: undefined;
 };

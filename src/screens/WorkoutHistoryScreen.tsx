@@ -18,6 +18,7 @@ import { formatTimeLong } from '../utils/helpers';
 import { WorkoutSession } from '../types';
 import { importExportService } from '../services/importExport';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import { useTranslation } from 'react-i18next';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutHistory'>;
 
@@ -26,6 +27,7 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
   const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
+  const { t, i18n } = useTranslation();
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -35,12 +37,12 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
 
   const handleDeleteWorkout = (workout: WorkoutSession) => {
     showAlert(
-      'Eliminar Entrenamiento',
-      `¿Estás seguro que deseas eliminar este entrenamiento?`,
+      t('history.deleteWorkout'),
+      t('history.deleteConfirm'),
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Eliminar',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => deleteWorkout(workout.id),
         },
@@ -50,17 +52,17 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
 
   const handleExport = async () => {
     if (history.length === 0) {
-      showAlert('Sin historial', 'No hay entrenamientos para exportar', [], 'information-circle');
+      showAlert(t('importExport.noData'), t('importExport.noData'), [], 'information-circle');
       return;
     }
 
     try {
       await importExportService.exportHistory(history);
-      showAlert('Éxito', 'Historial exportado correctamente', [], 'checkmark-circle');
+      showAlert(t('importExport.exportSuccess'), t('importExport.exportSuccess'), [], 'checkmark-circle');
     } catch (error) {
       console.error('Error al exportar historial:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      showAlert('Error', `No se pudo exportar el historial: ${errorMessage}`, [], 'close-circle', theme.colors.error);
+      const errorMessage = error instanceof Error ? error.message : t('errors.generic');
+      showAlert(t('importExport.exportError'), `${t('importExport.exportError')}: ${errorMessage}`, [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -68,13 +70,16 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
     try {
       const result = await importExportService.importHistory();
       if (result.success) {
-        showAlert('Éxito', result.message, [], 'checkmark-circle');
+        showAlert(t('importExport.importSuccess'), result.message, [], 'checkmark-circle');
         await refresh();
       } else {
-        showAlert('Información', result.message, [], 'information-circle');
+        const message = result.message === 'Importación cancelada' 
+          ? t('importExport.importCanceled')
+          : result.message;
+        showAlert(t('common.info'), message, [], 'information-circle');
       }
     } catch (error) {
-      showAlert('Error', 'No se pudo importar el historial', [], 'close-circle', theme.colors.error);
+      showAlert(t('importExport.importError'), t('importExport.importError'), [], 'close-circle', theme.colors.error);
     }
   };
 
@@ -98,15 +103,16 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
     const date = new Date(timestamp);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    const locale = i18n.language === 'en' ? 'en-US' : i18n.language === 'pt' ? 'pt-BR' : 'es-ES';
 
     if (diffDays === 0) {
-      return `Hoy a las ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+      return t('history.todayAt', { time: date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) });
     } else if (diffDays === 1) {
-      return `Ayer a las ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+      return t('history.yesterdayAt', { time: date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) });
     } else if (diffDays < 7) {
-      return `Hace ${diffDays} días`;
+      return t('history.daysAgo', { count: diffDays });
     } else {
-      return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+      return date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
     }
   };
 
@@ -137,19 +143,19 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
           <View style={styles.statItem}>
             <Ionicons name="time-outline" size={20} color={theme.colors.primary} />
             <Text style={styles.statValue}>{formatTimeLong(item.duration)}</Text>
-            <Text style={styles.statLabel}>Duración</Text>
+            <Text style={styles.statLabel}>{t('history.duration')}</Text>
           </View>
 
           <View style={styles.statItem}>
             <Ionicons name="checkmark-circle" size={20} color={theme.colors.accent} />
             <Text style={styles.statValue}>{item.completedActivities}</Text>
-            <Text style={styles.statLabel}>Ejercicios</Text>
+            <Text style={styles.statLabel}>{t('history.exercises')}</Text>
           </View>
 
           <View style={styles.statItem}>
             <Ionicons name="bar-chart" size={20} color={theme.colors.info} />
             <Text style={styles.statValue}>{completionRate.toFixed(0)}%</Text>
-            <Text style={styles.statLabel}>Completado</Text>
+            <Text style={styles.statLabel}>{t('history.completion')}</Text>
           </View>
         </View>
 
@@ -173,7 +179,7 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
     return (
       <View style={styles.headerStats}>
         <Text style={styles.headerTitle}>
-          {history.length} {history.length === 1 ? 'Entrenamiento' : 'Entrenamientos'}
+          {t('history.workouts', { count: history.length })}
         </Text>
       </View>
     );
@@ -183,9 +189,9 @@ export default function WorkoutHistoryScreen({ navigation }: Props) {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="calendar-outline" size={80} color={theme.colors.textTertiary} />
-        <Text style={styles.emptyTitle}>No hay entrenamientos</Text>
+        <Text style={styles.emptyTitle}>{t('history.noHistory')}</Text>
         <Text style={styles.emptyText}>
-          Completa tu primera rutina para ver tu historial
+          {t('history.noHistoryDescription')}
         </Text>
       </View>
     );

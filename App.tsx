@@ -3,19 +3,37 @@ import { View, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { theme } from './src/theme';
+import { initI18n } from './src/i18n';
+import './src/i18n'; // Importar para que i18n esté disponible
 
 const ONBOARDING_KEY = '@BeatFit:onboarding_completed';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [i18nInitialized, setI18nInitialized] = useState(false);
 
   useEffect(() => {
-    checkOnboarding();
+    initializeApp();
   }, []);
+
+  const initializeApp = async () => {
+    try {
+      // Inicializar i18n
+      await initI18n();
+      setI18nInitialized(true);
+      
+      // Verificar onboarding
+      await checkOnboarding();
+    } catch (error) {
+      console.error('Error initializing app:', error);
+      setIsLoading(false);
+    }
+  };
 
   const checkOnboarding = async () => {
     try {
@@ -44,7 +62,7 @@ export default function App() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !i18nInitialized) {
     return (
       <View style={styles.container}>
         <StatusBar style="light" />
@@ -53,16 +71,18 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <View style={styles.container}>
-        <StatusBar style="light" />
-        {showOnboarding ? (
-          <OnboardingScreen onComplete={handleOnboardingComplete} />
-        ) : (
-          <AppNavigator />
-        )}
-      </View>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <View style={styles.container}>
+          <StatusBar style="light" />
+          {showOnboarding ? (
+            <OnboardingScreen onComplete={handleOnboardingComplete} />
+          ) : (
+            <AppNavigator />
+          )}
+        </View>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

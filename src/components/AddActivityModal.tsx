@@ -19,6 +19,7 @@ import { Activity, ActivityType, ExerciseTemplate, ExerciseIcon, ExerciseType } 
 import { generateId, searchExercises } from '../utils/helpers';
 import { useExercises } from '../hooks/useStorage';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import { useTranslation } from 'react-i18next';
 
 interface AddActivityModalProps {
   visible: boolean;
@@ -30,6 +31,7 @@ interface AddActivityModalProps {
 export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivityModalProps) {
   const { exercises, saveExercise } = useExercises();
   const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
+  const { t } = useTranslation();
 
   const [activityType, setActivityType] = useState<ActivityType>('exercise');
   const [exerciseType, setExerciseType] = useState<ExerciseType>('time');
@@ -97,17 +99,17 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
 
   const handleAdd = async () => {
     if (!name.trim()) {
-      showAlert('Error', 'Por favor ingresa un nombre', [], 'close-circle', theme.colors.error);
+      showAlert(t('common.error'), t('createRoutine.errorNameRequired'), [], 'close-circle', theme.colors.error);
       return;
     }
 
     if (activityType === 'exercise' && exerciseType === 'time' && (!duration || parseInt(duration) <= 0)) {
-      showAlert('Error', 'Por favor ingresa una duración válida', [], 'close-circle', theme.colors.error);
+      showAlert(t('common.error'), t('createRoutine.errorDurationInvalid'), [], 'close-circle', theme.colors.error);
       return;
     }
 
     if (activityType === 'exercise' && exerciseType === 'reps' && (!reps || parseInt(reps) <= 0)) {
-      showAlert('Error', 'Por favor ingresa un número de repeticiones válido', [], 'close-circle', theme.colors.error);
+      showAlert(t('common.error'), t('createRoutine.errorRepsInvalid'), [], 'close-circle', theme.colors.error);
       return;
     }
 
@@ -148,7 +150,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
       >
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Agregar Actividad</Text>
+            <Text style={styles.title}>{t('createRoutine.addActivity')}</Text>
             <TouchableOpacity onPress={handleClose}>
               <Ionicons name="close" size={28} color={theme.colors.textPrimary} />
             </TouchableOpacity>
@@ -157,7 +159,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Tipo de actividad */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tipo</Text>
+              <Text style={styles.sectionTitle}>{t('exercises.exerciseType')}</Text>
               <View style={styles.typeButtons}>
                 <TouchableOpacity
                   style={[
@@ -180,7 +182,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                       activityType === 'exercise' && styles.typeButtonTextActive,
                     ]}
                   >
-                    Ejercicio
+                    {t('createRoutine.exercise')}
                   </Text>
                 </TouchableOpacity>
 
@@ -193,7 +195,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                     setActivityType('rest');
                     setExerciseType('time');
                     setSelectedIcon('timer');
-                    setName('Descanso');
+                    setName(t('createRoutine.rest'));
                   }}
                 >
                   <Ionicons
@@ -207,7 +209,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                       activityType === 'rest' && styles.typeButtonTextActive,
                     ]}
                   >
-                    Descanso
+                    {t('createRoutine.rest')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -216,7 +218,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
             {/* Nombre e icono con sugerencias */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                {activityType === 'rest' ? 'Nombre' : 'Nombre del ejercicio'}
+                {activityType === 'rest' ? t('exercises.exerciseName') : t('exercises.exerciseName')}
               </Text>
               <View style={styles.nameRow}>
                 <TouchableOpacity
@@ -237,7 +239,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                 >
                   <TextInput
                     style={styles.nameInput}
-                    placeholder={activityType === 'rest' ? 'Descanso' : 'Escribe el nombre...'}
+                    placeholder={activityType === 'rest' ? t('createRoutine.rest') : t('exercises.exerciseNamePlaceholder')}
                     placeholderTextColor={theme.colors.textTertiary}
                     value={name}
                     onChangeText={handleNameChange}
@@ -253,7 +255,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                 <View style={styles.templateIndicator}>
                   <Ionicons name="checkmark-circle" size={16} color={theme.colors.accent} />
                   <Text style={styles.templateIndicatorText}>
-                    Usando ejercicio guardado
+                    {t('createRoutine.usingSavedExercise')}
                   </Text>
                 </View>
               )}
@@ -262,7 +264,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
             {/* Tipo de ejercicio (solo para ejercicios) */}
             {activityType === 'exercise' && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Medición</Text>
+                <Text style={styles.sectionTitle}>{t('createRoutine.measurement')}</Text>
                 <View style={styles.typeButtons}>
                   <TouchableOpacity
                     style={[
@@ -282,7 +284,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                         exerciseType === 'time' && styles.typeButtonTextActive,
                       ]}
                     >
-                      Tiempo
+                      {t('exercises.time')}
                     </Text>
                   </TouchableOpacity>
 
@@ -304,7 +306,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                         exerciseType === 'reps' && styles.typeButtonTextActive,
                       ]}
                     >
-                      Repeticiones
+                      {t('exercises.reps')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -315,7 +317,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
             <View style={styles.section}>
               {(activityType === 'rest' || exerciseType === 'time') ? (
                 <>
-                  <Text style={styles.sectionTitle}>Duración</Text>
+                  <Text style={styles.sectionTitle}>{t('exercises.duration')}</Text>
                   <TouchableOpacity
                     style={styles.durationButton}
                     onPress={() => setShowDurationPicker(true)}
@@ -329,7 +331,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                 </>
               ) : (
                 <>
-                  <Text style={styles.sectionTitle}>Repeticiones</Text>
+                  <Text style={styles.sectionTitle}>{t('exercises.reps')}</Text>
                   <TextInput
                     style={styles.input}
                     placeholder="10"
@@ -345,14 +347,14 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
 
           <View style={styles.footer}>
             <Button
-              title="Cancelar"
+              title={t("common.cancel")}
               onPress={handleClose}
               variant="ghost"
               size="medium"
               style={{ flex: 1 }}
             />
             <Button
-              title="Agregar"
+              title={t("common.add")}
               onPress={handleAdd}
               variant="primary"
               size="medium"

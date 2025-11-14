@@ -25,6 +25,7 @@ import { useWorkoutHistory } from "../hooks/useStorage";
 import { getBestTimeForRoutine } from "../utils/stats";
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ExecuteRoutine">;
 
@@ -32,6 +33,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const { routine } = route.params;
   const { saveWorkout, history } = useWorkoutHistory();
   const bestTime = getBestTimeForRoutine(routine.id, history);
+  const { t } = useTranslation();
   const {
     alertConfig,
     visible: alertVisible,
@@ -292,7 +294,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         const completedActivity: ExecutedActivity = {
           activity: currentActivity,
           blockIndex: -1, // -1 para pendientes
-          blockName: "Pendiente",
+          blockName: t("executeRoutine.pending"),
           blockRepetition: 0,
           status: "completed",
           startedAt: currentActivityStartTime,
@@ -562,12 +564,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
       // Mostrar alerta de confirmación
       showAlert(
-        "Salir de la Rutina",
-        "Si sales ahora, perderás todo el progreso de esta rutina. ¿Estás seguro que deseas salir?",
+        t("executeRoutine.exitRoutine"),
+        t("executeRoutine.exitWarning"),
         [
-          { text: "Continuar Rutina", style: "cancel" },
+          { text: t("executeRoutine.continueRoutine"), style: "cancel" },
           {
-            text: "Salir",
+            text: t("executeRoutine.exit"),
             style: "destructive",
             onPress: () => {
               isExitingRef.current = true;
@@ -595,12 +597,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
         // Mostrar alerta de confirmación
         showAlert(
-          "Salir de la Rutina",
-          "Si sales ahora, perderás todo el progreso de esta rutina. ¿Estás seguro que deseas salir?",
+          t("executeRoutine.exitRoutine"),
+          t("executeRoutine.exitWarning"),
           [
-            { text: "Continuar Rutina", style: "cancel" },
+            { text: t("executeRoutine.continueRoutine"), style: "cancel" },
             {
-              text: "Salir",
+              text: t("executeRoutine.exit"),
               style: "destructive",
               onPress: () => {
                 isExitingRef.current = true;
@@ -624,16 +626,18 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (!isPaused) {
-      // Pausando: guardar el timestamp actual
+      // Pausando: guardar el timestamp actual y reproducir sonido
       setPauseStartTime(Date.now());
+      notificationService.playPauseSound();
     } else {
-      // Reanudando: calcular el tiempo pausado
+      // Reanudando: calcular el tiempo pausado y reproducir sonido
       if (pauseStartTime) {
         const pauseDuration = Math.floor((Date.now() - pauseStartTime) / 1000);
         setCurrentActivityPausedTime((prev) => prev + pauseDuration);
         setTotalPausedTime((prev) => prev + pauseDuration);
         setPauseStartTime(null);
       }
+      notificationService.playResumeSound();
     }
     setIsPaused(!isPaused);
   };
@@ -646,12 +650,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     }
 
     showAlert(
-      "Salir de la Rutina",
-      "Si sales ahora, perderás todo el progreso de esta rutina. ¿Estás seguro que deseas salir?",
+      t("executeRoutine.exitRoutine"),
+      t("executeRoutine.exitWarning"),
       [
-        { text: "Continuar Rutina", style: "cancel" },
+        { text: t("executeRoutine.continueRoutine"), style: "cancel" },
         {
-          text: "Salir",
+          text: t("executeRoutine.exit"),
           style: "destructive",
           onPress: () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -683,7 +687,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         const skippedActivity: ExecutedActivity = {
           activity: currentActivity,
           blockIndex: -1,
-          blockName: "Pendiente",
+          blockName: t("executeRoutine.pending"),
           blockRepetition: 0,
           status: "skipped",
           startedAt: currentActivityStartTime,
@@ -898,12 +902,16 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           >
             <Ionicons name="trophy" size={64} color={theme.colors.success} />
           </View>
-          <Text style={styles.activityName}>¡Rutina Completada!</Text>
+          <Text style={styles.activityName}>
+            {t("executeRoutine.completed")}
+          </Text>
 
           {isNewBestTime && (
             <View style={styles.bestTimeBadge}>
               <Ionicons name="trophy" size={20} color={theme.colors.warning} />
-              <Text style={styles.bestTimeLabel}>¡Nuevo Récord!</Text>
+              <Text style={styles.bestTimeLabel}>
+                {t("executeRoutine.newRecord")}
+              </Text>
             </View>
           )}
 
@@ -918,7 +926,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               },
             ]}
           >
-            Has terminado tu entrenamiento
+            {t("executeRoutine.finishedTraining")}
           </Text>
 
           {/* Tiempo transcurrido */}
@@ -944,13 +952,17 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                 color={theme.colors.success}
               />
               <Text style={styles.completionStatValue}>{completedCount}</Text>
-              <Text style={styles.completionStatLabel}>Completados</Text>
+              <Text style={styles.completionStatLabel}>
+                {t("executeRoutine.completedCount")}
+              </Text>
             </View>
             {postponedCount > 0 && (
               <View style={styles.completionStatBox}>
                 <Ionicons name="time" size={28} color={theme.colors.warning} />
                 <Text style={styles.completionStatValue}>{postponedCount}</Text>
-                <Text style={styles.completionStatLabel}>Postergados</Text>
+                <Text style={styles.completionStatLabel}>
+                  {t("executeRoutine.postponedCount")}
+                </Text>
               </View>
             )}
             {skippedCount > 0 && (
@@ -961,7 +973,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                   color={theme.colors.error}
                 />
                 <Text style={styles.completionStatValue}>{skippedCount}</Text>
-                <Text style={styles.completionStatLabel}>Saltados</Text>
+                <Text style={styles.completionStatLabel}>
+                  {t("executeRoutine.skippedCount")}
+                </Text>
               </View>
             )}
           </View>
@@ -970,7 +984,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           <View style={styles.completionButtons}>
             {savedWorkoutId && (
               <Button
-                title="Ver Detalle"
+                title={t("executeRoutine.viewDetail")}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   const workout = history.find((w) => w.id === savedWorkoutId);
@@ -985,7 +999,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               />
             )}
             <Button
-              title="Finalizar"
+              title={t("executeRoutine.finish")}
               onPress={() => {
                 Haptics.notificationAsync(
                   Haptics.NotificationFeedbackType.Success,
@@ -1111,13 +1125,20 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             ]}
           >
             {currentBlock.type === "rest-block"
-              ? "Descanso entre Bloques"
+              ? t("executeRoutine.restBetweenBlocks")
               : currentBlock.type === "warmup"
-              ? "Calentamiento"
+              ? t("executeRoutine.warmup")
               : currentBlock.type === "cooldown"
-              ? "Elongación"
-              : `Bloque ${currentBlockIndex + 1}/${routine.blocks.length}`}{" "}
-            • Rep {currentBlockRep + 1}/{currentBlock.repetitions}
+              ? t("executeRoutine.cooldown")
+              : t("executeRoutine.block", {
+                  current: currentBlockIndex + 1,
+                  total: routine.blocks.length,
+                })}{" "}
+            •{" "}
+            {t("executeRoutine.rep", {
+              current: currentBlockRep + 1,
+              total: currentBlock.repetitions,
+            })}
           </Text>
         </View>
       </View>
@@ -1138,7 +1159,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               color={theme.colors.warning}
             />
             <Text style={styles.bestTimeChipText}>
-              Récord: {formatTimeLong(bestTime)}
+              {t("executeRoutine.record", { time: formatTimeLong(bestTime) })}
             </Text>
           </View>
         )}
@@ -1154,8 +1175,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               color={theme.colors.warning}
             />
             <Text style={styles.pendingIndicatorText}>
-              Ejercicio Pendiente ({currentPendingIndex + 1}/
-              {pendingActivities.length})
+              {t("executeRoutine.exercisePending", {
+                current: currentPendingIndex + 1,
+                total: pendingActivities.length,
+              })}
             </Text>
           </View>
         </View>
@@ -1170,7 +1193,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               size={48}
               color={theme.colors.warning}
             />
-            <Text style={styles.pauseTitle}>Rutina en Pausa</Text>
+            <Text style={styles.pauseTitle}>
+              {t("executeRoutine.pausedRoutine")}
+            </Text>
             {pauseStartTime && (
               <View style={styles.pauseTimeChip}>
                 <Ionicons
@@ -1179,12 +1204,17 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                   color={theme.colors.warning}
                 />
                 <Text style={styles.pauseTimeText}>
-                  Pausado:{" "}
-                  {formatTime(currentActivityPausedTime + currentPauseDuration)}
+                  {t("executeRoutine.paused", {
+                    time: formatTime(
+                      currentActivityPausedTime + currentPauseDuration,
+                    ),
+                  })}
                 </Text>
               </View>
             )}
-            <Text style={styles.pauseHint}>Presiona play para continuar</Text>
+            <Text style={styles.pauseHint}>
+              {t("executeRoutine.pressPlay")}
+            </Text>
           </View>
         </View>
       )}
@@ -1239,9 +1269,11 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                   size={40}
                   color={theme.colors.accent}
                 />
-                <Text style={styles.voiceText}>🎤 Escuchando...</Text>
+                <Text style={styles.voiceText}>
+                  {t("executeRoutine.listening")}
+                </Text>
                 <Text style={styles.voiceHint}>
-                  Di "terminé", "listo", "siguiente" o "ya"
+                  {t("executeRoutine.voiceHint")}
                 </Text>
                 <Text style={styles.voiceHintSmall}>
                   También: "hecho", "completo", "ok", "fin"
@@ -1258,7 +1290,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                   color={theme.colors.textTertiary}
                 />
                 <Text style={styles.infoText}>
-                  Toca el botón cuando termines las repeticiones
+                  {t("executeRoutine.tapWhenDone")}
                 </Text>
               </View>
             )}
@@ -1274,17 +1306,17 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           if (isProcessingPending) {
             // Estamos procesando pendientes
             if (!isLastPendingActivity) {
-              label = "Siguiente pendiente:";
+              label = t("executeRoutine.nextPending");
               nextActivityName =
                 pendingActivities[currentPendingIndex + 1]?.name || "";
             } else {
               // Después de los pendientes, volvemos al flujo normal
               if (isLastRepOfBlock) {
-                label = "Próximo bloque:";
+                label = t("executeRoutine.nextBlock");
                 const nextBlock = routine.blocks[currentBlockIndex + 1];
                 nextActivityName = nextBlock?.activities[0]?.name || "";
               } else {
-                label = "Repetir bloque:";
+                label = t("executeRoutine.repeatBlock");
                 nextActivityName = currentBlock.activities[0]?.name || "";
               }
             }
@@ -1292,16 +1324,18 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             // Flujo normal
             if (!isLastActivityInBlock) {
               // Siguiente actividad en el mismo bloque
-              label = "Siguiente:";
+              label = t("executeRoutine.nextExercise");
               nextActivityName =
                 currentBlock.activities[currentActivityIndex + 1]?.name || "";
             } else if (isLastActivityInBlock && !isLastRepOfBlock) {
               // Repetir el bloque o procesar pendientes
               if (pendingActivities.length > 0) {
-                label = "Ejercicios pendientes:";
+                label = t("executeRoutine.pendingExercises", {
+                  count: pendingActivities.length,
+                });
                 nextActivityName = pendingActivities[0]?.name || "";
               } else {
-                label = "Repetir bloque:";
+                label = t("executeRoutine.repeatBlock");
                 nextActivityName = currentBlock.activities[0]?.name || "";
               }
             } else if (
@@ -1311,20 +1345,24 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             ) {
               // Próximo bloque o procesar pendientes
               if (pendingActivities.length > 0) {
-                label = "Ejercicios pendientes:";
+                label = t("executeRoutine.pendingExercises", {
+                  count: pendingActivities.length,
+                });
                 nextActivityName = pendingActivities[0]?.name || "";
               } else {
-                label = "Próximo bloque:";
+                label = t("executeRoutine.nextBlock");
                 const nextBlock = routine.blocks[currentBlockIndex + 1];
                 nextActivityName = nextBlock?.activities[0]?.name || "";
               }
             } else {
               // Última actividad de la rutina (o pendientes si hay)
               if (pendingActivities.length > 0) {
-                label = "Ejercicios pendientes:";
+                label = t("executeRoutine.pendingExercises", {
+                  count: pendingActivities.length,
+                });
                 nextActivityName = pendingActivities[0]?.name || "";
               } else {
-                label = "¡Última actividad!";
+                label = t("executeRoutine.lastActivity");
                 nextActivityName = "";
               }
             }
@@ -1364,7 +1402,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Saltar Ejercicio</Text>
+            <Text style={styles.modalTitle}>
+              {t("executeRoutine.skipExercise")}
+            </Text>
             <Text style={styles.modalSubtitle}>{currentActivity.name}</Text>
 
             <View style={styles.modalButtons}>
@@ -1378,8 +1418,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                   size={48}
                   color={theme.colors.error}
                 />
-                <Text style={styles.modalButtonTitle}>Saltar</Text>
-                <Text style={styles.modalButtonSubtitle}>Definitivamente</Text>
+                <Text style={styles.modalButtonTitle}>
+                  {t("executeRoutine.skip")}
+                </Text>
+                <Text style={styles.modalButtonSubtitle}>
+                  {t("executeRoutine.skipDefinitely")}
+                </Text>
               </TouchableOpacity>
 
               {/* Skip Pending (only if allowed) */}
@@ -1393,8 +1437,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                     size={48}
                     color={theme.colors.warning}
                   />
-                  <Text style={styles.modalButtonTitle}>Dejar</Text>
-                  <Text style={styles.modalButtonSubtitle}>Pendiente</Text>
+                  <Text style={styles.modalButtonTitle}>
+                    {t("executeRoutine.skipPendingVerb")}
+                  </Text>
+                  <Text style={styles.modalButtonSubtitle}>
+                    {t("executeRoutine.skipPendingNoun")}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1403,7 +1451,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               style={styles.modalCancelButton}
               onPress={() => setShowSkipModal(false)}
             >
-              <Text style={styles.modalCancelText}>Cancelar</Text>
+              <Text style={styles.modalCancelText}>{t("common.cancel")}</Text>
             </TouchableOpacity>
           </View>
         </View>

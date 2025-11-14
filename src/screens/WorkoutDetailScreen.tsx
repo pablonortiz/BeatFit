@@ -16,6 +16,7 @@ import { formatTime, formatTimeLong } from '../utils/helpers';
 import { Activity, ExecutedActivity } from '../types';
 import { useWorkoutHistory } from '../hooks/useStorage';
 import { isBestTime } from '../utils/stats';
+import { useTranslation } from 'react-i18next';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'WorkoutDetail'>;
 
@@ -23,10 +24,12 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
   const { workout } = route.params;
   const { history } = useWorkoutHistory();
   const isPersonalBest = isBestTime(workout, history);
+  const { t, i18n } = useTranslation();
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('es-ES', {
+    const locale = i18n.language === 'en' ? 'en-US' : i18n.language === 'pt' ? 'pt-BR' : 'es-ES';
+    return date.toLocaleDateString(locale, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -36,7 +39,8 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
 
   const formatTimeOfDay = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const locale = i18n.language === 'en' ? 'en-US' : i18n.language === 'pt' ? 'pt-BR' : 'es-ES';
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   };
 
   const calculateActivityTime = (activity: Activity, totalDuration: number, totalActivities: number): number => {
@@ -175,7 +179,7 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
               {activity.exerciseType === 'reps' && (
                 <View style={styles.metaItem}>
                   <Ionicons name="repeat-outline" size={14} color={theme.colors.textSecondary} />
-                  <Text style={styles.metaText}>{activity.reps} reps</Text>
+                  <Text style={styles.metaText}>{activity.reps} {t("exercises.reps").toLowerCase()}</Text>
                 </View>
               )}
             </View>
@@ -185,22 +189,22 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
               <View style={styles.pausedIndicatorBox}>
                 <Ionicons name="pause-circle" size={16} color={theme.colors.warning} />
                 <Text style={styles.pausedIndicatorText}>
-                  Pausado: {formatTime(activity.pausedTime)}
+                  {t("workoutDetail.pausedTime", { time: formatTime(activity.pausedTime) })}
                 </Text>
               </View>
             )}
             
             <Text style={styles.blockInfo}>
-              {activity.blockName} • Rep {activity.rep}
+              {activity.blockName} • {t("executeRoutine.repLabel")} {activity.rep}
             </Text>
             {isSkipped && (
-              <Text style={styles.statusLabel}>Saltado</Text>
+              <Text style={styles.statusLabel}>{t("workoutDetail.skipped")}</Text>
             )}
             {wasPostponedLater && (
-              <Text style={[styles.statusLabel, { color: theme.colors.warning }]}>Postergado</Text>
+              <Text style={[styles.statusLabel, { color: theme.colors.warning }]}>{t("workoutDetail.postponed")}</Text>
             )}
             {wasPostponedBefore && (
-              <Text style={[styles.statusLabel, { color: theme.colors.warning }]}>Completado después</Text>
+              <Text style={[styles.statusLabel, { color: theme.colors.warning }]}>{t("workoutDetail.completedLater")}</Text>
             )}
           </View>
         </View>
@@ -228,7 +232,7 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
             {isPersonalBest && (
               <View style={styles.bestTimeBadge}>
                 <Ionicons name="trophy" size={20} color={theme.colors.warning} />
-                <Text style={styles.bestTimeLabel}>¡Mejor Tiempo!</Text>
+                <Text style={styles.bestTimeLabel}>{t("workoutDetail.bestTime")}</Text>
               </View>
             )}
           </View>
@@ -242,19 +246,19 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
             <View style={styles.statBox}>
               <Ionicons name="time-outline" size={28} color={theme.colors.primary} />
               <Text style={styles.statValue}>{formatTimeLong(workout.duration)}</Text>
-              <Text style={styles.statLabel}>Duración</Text>
+              <Text style={styles.statLabel}>{t("workoutDetail.duration")}</Text>
             </View>
 
             <View style={styles.statBox}>
               <Ionicons name="fitness-outline" size={28} color={theme.colors.accent} />
               <Text style={styles.statValue}>{workout.completedActivities}</Text>
-              <Text style={styles.statLabel}>Ejercicios</Text>
+              <Text style={styles.statLabel}>{t("workoutDetail.exercises")}</Text>
             </View>
 
             <View style={styles.statBox}>
               <Ionicons name="checkmark-circle-outline" size={28} color={theme.colors.success} />
               <Text style={styles.statValue}>{completionRate.toFixed(0)}%</Text>
-              <Text style={styles.statLabel}>Completado</Text>
+              <Text style={styles.statLabel}>{t("workoutDetail.completion")}</Text>
             </View>
           </View>
 
@@ -265,7 +269,7 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
                 <Ionicons name="pause-circle" size={24} color={theme.colors.warning} />
                 <View style={styles.pauseStatText}>
                   <Text style={styles.pauseStatValue}>{formatTimeLong(totalPausedTime)}</Text>
-                  <Text style={styles.pauseStatLabel}>en pausa durante la rutina</Text>
+                  <Text style={styles.pauseStatLabel}>{t("workoutDetail.totalPaused")}</Text>
                 </View>
               </View>
             </View>
@@ -279,9 +283,9 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
 
         {/* Timeline Section */}
         <View style={styles.timelineSection}>
-          <Text style={styles.sectionTitle}>Línea de Tiempo</Text>
+          <Text style={styles.sectionTitle}>{t("workoutDetail.timeline")}</Text>
           <Text style={styles.sectionSubtitle}>
-            {activitiesWithTime.length} actividades realizadas
+            {t("workoutDetail.activitiesCompleted", { count: activitiesWithTime.length })}
           </Text>
 
           <ScrollView
@@ -295,7 +299,7 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
 
         {/* Blocks Summary */}
         <View style={styles.blocksSection}>
-          <Text style={styles.sectionTitle}>Resumen por Bloques</Text>
+          <Text style={styles.sectionTitle}>{t("workoutDetail.blocksSummary")}</Text>
           {workout.blocks.map((block, index) => {
             const isSpecialBlock = block.type === 'warmup' || block.type === 'cooldown' || block.type === 'rest-block';
             const blockColor = 
@@ -341,11 +345,11 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
                 <View style={styles.blockStats}>
                   <View style={styles.blockStat}>
                     <Ionicons name="repeat-outline" size={16} color={theme.colors.textSecondary} />
-                    <Text style={styles.blockStatText}>{block.repetitions} repeticiones</Text>
+                    <Text style={styles.blockStatText}>{t("workoutDetail.repetitions", { count: block.repetitions })}</Text>
                   </View>
                   <View style={styles.blockStat}>
                     <Ionicons name="list-outline" size={16} color={theme.colors.textSecondary} />
-                    <Text style={styles.blockStatText}>{block.activities.length} actividades</Text>
+                    <Text style={styles.blockStatText}>{t("workoutDetail.activities", { count: block.activities.length })}</Text>
                   </View>
                 </View>
               </Card>

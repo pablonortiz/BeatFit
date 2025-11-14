@@ -4,6 +4,8 @@ import { Audio } from 'expo-av';
 class NotificationService {
   private exerciseSound: Audio.Sound | null = null;
   private routineSound: Audio.Sound | null = null;
+  private pauseSound: Audio.Sound | null = null;
+  private resumeSound: Audio.Sound | null = null;
   private isInitialized = false;
 
   async initialize() {
@@ -30,6 +32,20 @@ class NotificationService {
       );
       this.routineSound = routineSound;
 
+      // Cargar sonido de pausa
+      const { sound: pauseSound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/pause-alert.wav'),
+        { shouldPlay: false }
+      );
+      this.pauseSound = pauseSound;
+
+      // Cargar sonido de reanudación
+      const { sound: resumeSound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/resume-alert.wav'),
+        { shouldPlay: false }
+      );
+      this.resumeSound = resumeSound;
+
       this.isInitialized = true;
     } catch (error) {
       console.error('Error inicializando sonidos:', error);
@@ -53,6 +69,26 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error reproduciendo sonido de rutina:', error);
+    }
+  }
+
+  async playPauseSound() {
+    try {
+      if (this.pauseSound) {
+        await this.pauseSound.replayAsync();
+      }
+    } catch (error) {
+      console.error('Error reproduciendo sonido de pausa:', error);
+    }
+  }
+
+  async playResumeSound() {
+    try {
+      if (this.resumeSound) {
+        await this.resumeSound.replayAsync();
+      }
+    } catch (error) {
+      console.error('Error reproduciendo sonido de reanudación:', error);
     }
   }
 
@@ -92,6 +128,14 @@ class NotificationService {
       if (this.routineSound) {
         await this.routineSound.unloadAsync();
         this.routineSound = null;
+      }
+      if (this.pauseSound) {
+        await this.pauseSound.unloadAsync();
+        this.pauseSound = null;
+      }
+      if (this.resumeSound) {
+        await this.resumeSound.unloadAsync();
+        this.resumeSound = null;
       }
       this.isInitialized = false;
     } catch (error) {

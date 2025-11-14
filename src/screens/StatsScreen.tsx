@@ -14,6 +14,7 @@ import { Card } from '../components';
 import { useWorkoutStats } from '../hooks/useStorage';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTimeLong } from '../utils/helpers';
+import { useTranslation } from 'react-i18next';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Stats'>;
 
@@ -21,6 +22,7 @@ export default function StatsScreen({ navigation }: Props) {
   const { stats, loading } = useWorkoutStats();
   const [refreshing, setRefreshing] = React.useState(false);
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -29,16 +31,17 @@ export default function StatsScreen({ navigation }: Props) {
   };
 
   const formatNumber = (num: number) => {
-    return num.toLocaleString('es-ES');
+    const locale = i18n.language === 'en' ? 'en-US' : i18n.language === 'pt' ? 'pt-BR' : 'es-ES';
+    return num.toLocaleString(locale);
   };
 
   if (!loading && stats.totalWorkouts === 0) {
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="stats-chart-outline" size={80} color={theme.colors.textTertiary} />
-        <Text style={styles.emptyTitle}>No hay estadísticas</Text>
+        <Text style={styles.emptyTitle}>{t('stats.noStats')}</Text>
         <Text style={styles.emptyText}>
-          Completa entrenamientos para ver tu progreso
+          {t('stats.noStatsDescription')}
         </Text>
       </View>
     );
@@ -61,37 +64,37 @@ export default function StatsScreen({ navigation }: Props) {
         <Card style={styles.streakCard}>
           <Ionicons name="flame" size={48} color={theme.colors.primary} />
           <Text style={styles.streakValue}>{stats.currentStreak}</Text>
-          <Text style={styles.streakLabel}>Racha Actual</Text>
-          <Text style={styles.streakSubLabel}>días consecutivos</Text>
+          <Text style={styles.streakLabel}>{t('stats.currentStreak')}</Text>
+          <Text style={styles.streakSubLabel}>{t('stats.consecutiveDays')}</Text>
         </Card>
         <Card style={styles.streakCard}>
           <Ionicons name="trophy" size={48} color={theme.colors.accent} />
           <Text style={styles.streakValue}>{stats.longestStreak}</Text>
-          <Text style={styles.streakLabel}>Mejor Racha</Text>
-          <Text style={styles.streakSubLabel}>días consecutivos</Text>
+          <Text style={styles.streakLabel}>{t('stats.bestStreak')}</Text>
+          <Text style={styles.streakSubLabel}>{t('stats.consecutiveDays')}</Text>
         </Card>
       </View>
 
       {/* Resumen General */}
-      <Text style={styles.sectionTitle}>Resumen General</Text>
+      <Text style={styles.sectionTitle}>{t('stats.generalSummary')}</Text>
       <Card style={styles.statsCard}>
         <View style={styles.statsGrid}>
           <View style={styles.statBigItem}>
             <Ionicons name="fitness" size={32} color={theme.colors.primary} />
             <Text style={styles.statBigValue}>{formatNumber(stats.totalWorkouts)}</Text>
-            <Text style={styles.statBigLabel}>Entrenamientos</Text>
+            <Text style={styles.statBigLabel}>{t('stats.workouts')}</Text>
           </View>
 
           <View style={styles.statBigItem}>
             <Ionicons name="time" size={32} color={theme.colors.secondary} />
             <Text style={styles.statBigValue}>{formatTimeLong(stats.totalTime)}</Text>
-            <Text style={styles.statBigLabel}>Tiempo Total</Text>
+            <Text style={styles.statBigLabel}>{t('stats.totalTime')}</Text>
           </View>
 
           <View style={styles.statBigItem}>
             <Ionicons name="barbell" size={32} color={theme.colors.accent} />
             <Text style={styles.statBigValue}>{formatNumber(stats.totalActivities)}</Text>
-            <Text style={styles.statBigLabel}>Ejercicios</Text>
+            <Text style={styles.statBigLabel}>{t('stats.exercises')}</Text>
           </View>
 
           <View style={styles.statBigItem}>
@@ -99,20 +102,20 @@ export default function StatsScreen({ navigation }: Props) {
             <Text style={styles.statBigValue}>
               {formatTimeLong(Math.round(stats.averageWorkoutDuration))}
             </Text>
-            <Text style={styles.statBigLabel}>Promedio</Text>
+            <Text style={styles.statBigLabel}>{t('stats.average')}</Text>
           </View>
         </View>
       </Card>
 
       {/* Actividad Reciente */}
-      <Text style={styles.sectionTitle}>Actividad Reciente</Text>
+      <Text style={styles.sectionTitle}>{t('stats.recentActivity')}</Text>
       <View style={styles.activityRow}>
         <Card style={styles.activityCard}>
           <View style={styles.activityHeader}>
             <Ionicons name="calendar" size={24} color={theme.colors.primary} />
             <Text style={styles.activityValue}>{stats.workoutsByWeek}</Text>
           </View>
-          <Text style={styles.activityLabel}>Esta Semana</Text>
+          <Text style={styles.activityLabel}>{t('stats.thisWeek')}</Text>
         </Card>
 
         <Card style={styles.activityCard}>
@@ -120,21 +123,21 @@ export default function StatsScreen({ navigation }: Props) {
             <Ionicons name="calendar-outline" size={24} color={theme.colors.accent} />
             <Text style={styles.activityValue}>{stats.workoutsByMonth}</Text>
           </View>
-          <Text style={styles.activityLabel}>Este Mes</Text>
+          <Text style={styles.activityLabel}>{t('stats.thisMonth')}</Text>
         </Card>
       </View>
 
       {/* Rutina Favorita */}
       {stats.favoriteRoutine && (
         <>
-          <Text style={styles.sectionTitle}>Rutina Favorita</Text>
+          <Text style={styles.sectionTitle}>{t('stats.favoriteRoutine')}</Text>
           <Card style={styles.favoriteCard}>
             <View style={styles.favoriteHeader}>
               <Ionicons name="heart" size={32} color={theme.colors.error} />
               <View style={styles.favoriteInfo}>
                 <Text style={styles.favoriteName}>{stats.favoriteRoutine.routineName}</Text>
                 <Text style={styles.favoriteCount}>
-                  Completada {stats.favoriteRoutine.count} veces
+                  {t('stats.completedTimes', { count: stats.favoriteRoutine.count })}
                 </Text>
               </View>
             </View>
@@ -145,7 +148,7 @@ export default function StatsScreen({ navigation }: Props) {
       {/* Ejercicios Más Usados */}
       {stats.mostUsedExercises.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Ejercicios Más Usados</Text>
+          <Text style={styles.sectionTitle}>{t('stats.mostUsedExercises')}</Text>
           <Card style={styles.exercisesCard}>
             {stats.mostUsedExercises.map((exercise, index) => (
               <View key={index} style={styles.exerciseItem}>
@@ -168,12 +171,15 @@ export default function StatsScreen({ navigation }: Props) {
       {/* Última Actualización */}
       {stats.lastWorkoutDate && (
         <Text style={styles.lastUpdate}>
-          Última actualización:{' '}
-          {new Date(stats.lastWorkoutDate).toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-          })}
+          {t('stats.lastUpdate')}:{' '}
+          {new Date(stats.lastWorkoutDate).toLocaleDateString(
+            i18n.language === 'en' ? 'en-US' : i18n.language === 'pt' ? 'pt-BR' : 'es-ES',
+            {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+            }
+          )}
         </Text>
       )}
     </ScrollView>
