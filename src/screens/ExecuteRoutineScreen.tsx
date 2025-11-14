@@ -150,6 +150,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         if (isLastRepOfBlock && isLastBlock) {
           setIsComplete(true);
 
+          // Reproducir sonido de rutina completada
+          await notificationService.playRoutineCompletion();
+
           // Guardar en el historial
           await saveCompletedWorkout();
 
@@ -196,6 +199,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
       // Rutina completa
       setIsComplete(true);
+
+      // Reproducir sonido de rutina completada
+      await notificationService.playRoutineCompletion();
 
       // Guardar en el historial
       await saveCompletedWorkout();

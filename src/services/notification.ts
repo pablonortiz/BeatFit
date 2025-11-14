@@ -1,16 +1,59 @@
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 
 class NotificationService {
+  private exerciseSound: Audio.Sound | null = null;
+  private routineSound: Audio.Sound | null = null;
+  private isInitialized = false;
+
   async initialize() {
-    // No requiere inicialización
+    try {
+      // Configurar el modo de audio para NO pausar la música de otras apps
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true, // Reduce el volumen de otras apps temporalmente
+        playThroughEarpieceAndroid: false,
+      });
+
+      // Cargar sonido de ejercicio completado
+      const { sound: exerciseSound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/exercise-done-alert.wav'),
+        { shouldPlay: false }
+      );
+      this.exerciseSound = exerciseSound;
+
+      // Cargar sonido de rutina completada
+      const { sound: routineSound } = await Audio.Sound.createAsync(
+        require('../../assets/sounds/routine-done-alert.wav'),
+        { shouldPlay: false }
+      );
+      this.routineSound = routineSound;
+
+      this.isInitialized = true;
+    } catch (error) {
+      console.error('Error inicializando sonidos:', error);
+    }
   }
 
-  async playCompletionSound() {
-    // TODO: Implementar con archivos de audio locales cuando estén listos
-    // Por ahora usamos solo vibración que es más efectivo durante el ejercicio
-    // En producción: agregar archivos .mp3 en assets/sounds/ y usar expo-audio
-    // Ejemplo: const sound = await Audio.load(require('../../assets/sounds/completion.mp3'));
-    //          await sound.play();
+  async playExerciseCompletionSound() {
+    try {
+      if (this.exerciseSound) {
+        await this.exerciseSound.replayAsync();
+      }
+    } catch (error) {
+      console.error('Error reproduciendo sonido de ejercicio:', error);
+    }
+  }
+
+  async playRoutineCompletionSound() {
+    try {
+      if (this.routineSound) {
+        await this.routineSound.replayAsync();
+      }
+    } catch (error) {
+      console.error('Error reproduciendo sonido de rutina:', error);
+    }
   }
 
   async vibrate() {
@@ -20,20 +63,40 @@ class NotificationService {
         Haptics.NotificationFeedbackType.Success
       );
     } catch (error) {
-      console.error('Error vibrating:', error);
+      console.error('Error vibrando:', error);
     }
   }
 
   async playNotification() {
-    // Por ahora solo vibrar - más efectivo durante el ejercicio
-    await this.vibrate();
+    // Reproducir sonido de ejercicio completado + vibración
+    await Promise.all([
+      this.playExerciseCompletionSound(),
+      this.vibrate(),
+    ]);
+  }
 
-    // Nota: El sonido se puede agregar fácilmente más adelante
-    // con archivos de audio locales y expo-audio
+  async playRoutineCompletion() {
+    // Reproducir sonido de rutina completada + vibración más intensa
+    await Promise.all([
+      this.playRoutineCompletionSound(),
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+    ]);
   }
 
   async cleanup() {
-    // No hay recursos para limpiar actualmente
+    try {
+      if (this.exerciseSound) {
+        await this.exerciseSound.unloadAsync();
+        this.exerciseSound = null;
+      }
+      if (this.routineSound) {
+        await this.routineSound.unloadAsync();
+        this.routineSound = null;
+      }
+      this.isInitialized = false;
+    } catch (error) {
+      console.error('Error limpiando sonidos:', error);
+    }
   }
 }
 
