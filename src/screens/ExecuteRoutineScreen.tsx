@@ -7,6 +7,7 @@ import {
   Alert,
   Animated,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -452,18 +453,23 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       )}
 
       {/* Main Content */}
-      <View style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Activity Icon */}
         <Animated.View
           style={[
             styles.iconContainer,
             isRestActivity && styles.iconContainerRest,
+            isRepsBasedActivity && styles.iconContainerSmall,
             { transform: [{ scale: pulseAnim }] },
           ]}
         >
           <Ionicons
             name={currentActivity.icon as any}
-            size={80}
+            size={isRepsBasedActivity ? 60 : 80}
             color={isRestActivity ? theme.colors.rest : theme.colors.exercise}
           />
         </Animated.View>
@@ -486,7 +492,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             {/* Voice Recognition Indicator - PROMINENTE */}
             {isVoiceAvailable && isListening && (
               <Animated.View style={[styles.voiceIndicator, { transform: [{ scale: pulseAnim }] }]}>
-                <Ionicons name="mic-circle" size={48} color={theme.colors.accent} />
+                <Ionicons name="mic-circle" size={40} color={theme.colors.accent} />
                 <Text style={styles.voiceText}>
                   Escuchando...
                 </Text>
@@ -499,26 +505,16 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             {/* Info cuando voz no disponible */}
             {!isVoiceAvailable && (
               <View style={styles.infoIndicator}>
-                <Ionicons name="information-circle" size={20} color={theme.colors.textTertiary} />
+                <Ionicons name="information-circle" size={18} color={theme.colors.textTertiary} />
                 <Text style={styles.infoText}>
                   Toca el botón cuando termines las repeticiones
                 </Text>
               </View>
             )}
-
-            {/* Manual Complete Button */}
-            <Button
-              title="Marcar como Completado"
-              onPress={goToNextActivity}
-              variant="primary"
-              size="large"
-              fullWidth
-              style={styles.completeButton}
-            />
           </>
         )}
 
-        {/* Next Activity Preview */}
+        {/* Next Activity Preview - ANTES del botón para mejor visibilidad */}
         {(() => {
           // Determinar qué se viene después
           let label = '';
@@ -588,7 +584,19 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             </View>
           );
         })()}
-      </View>
+
+        {/* Manual Complete Button - DESPUÉS del próximo ejercicio */}
+        {isRepsBasedActivity && (
+          <Button
+            title="Marcar como Completado"
+            onPress={goToNextActivity}
+            variant="primary"
+            size="large"
+            fullWidth
+            style={styles.completeButton}
+          />
+        )}
+      </ScrollView>
 
       {/* Skip Modal */}
       <Modal
@@ -771,9 +779,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.lg,
   },
   iconContainer: {
     width: 160,
@@ -782,9 +794,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
     borderWidth: 4,
     borderColor: theme.colors.primary,
+  },
+  iconContainerSmall: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    marginBottom: theme.spacing.md,
   },
   iconContainerRest: {
     backgroundColor: theme.colors.rest + '20',
@@ -793,16 +811,16 @@ const styles = StyleSheet.create({
   activityName: {
     ...theme.typography.h1,
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   timer: {
     ...theme.typography.timer,
     textAlign: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
   },
   repsContainer: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
   },
   repsLabel: {
     ...theme.typography.body,
@@ -814,33 +832,34 @@ const styles = StyleSheet.create({
   },
   voiceIndicator: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.accent + '20',
     borderRadius: theme.borderRadius.lg,
     borderWidth: 2,
     borderColor: theme.colors.accent + '40',
   },
   voiceText: {
-    ...theme.typography.h4,
+    ...theme.typography.bodyBold,
     color: theme.colors.accent,
-    marginTop: theme.spacing.sm,
-    fontWeight: '700',
+    marginTop: theme.spacing.xs,
+    fontSize: 16,
   },
   voiceHint: {
     ...theme.typography.caption,
     color: theme.colors.accent,
-    marginTop: theme.spacing.xs,
+    marginTop: 2,
     textAlign: 'center',
+    fontSize: 11,
   },
   infoIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.backgroundCardLight,
     borderRadius: theme.borderRadius.md,
   },
@@ -848,22 +867,34 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
     flex: 1,
+    fontSize: 12,
   },
   completeButton: {
     maxWidth: 300,
+    marginTop: theme.spacing.lg,
   },
   nextActivity: {
-    marginTop: theme.spacing.xxl,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
     alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minWidth: 200,
   },
   nextActivityLabel: {
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
     marginBottom: theme.spacing.xs,
+    fontSize: 12,
   },
   nextActivityName: {
     ...theme.typography.bodyBold,
-    color: theme.colors.textSecondary,
+    color: theme.colors.textPrimary,
+    fontSize: 16,
   },
   modalOverlay: {
     flex: 1,
