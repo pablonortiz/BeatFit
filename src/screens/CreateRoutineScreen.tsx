@@ -19,6 +19,8 @@ import { Block, Activity, Routine } from '../types';
 import { generateId, formatTime } from '../utils/helpers';
 import { useRoutines } from '../hooks/useStorage';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateRoutine'>;
 
