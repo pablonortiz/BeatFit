@@ -7,18 +7,18 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
-import { Button } from './Button';
+import { Button, CustomAlert } from './';
 import { IconPicker } from './IconPicker';
 import { DurationPicker } from './DurationPicker';
 import { Activity, ActivityType, ExerciseTemplate, ExerciseIcon, ExerciseType } from '../types';
 import { generateId, searchExercises } from '../utils/helpers';
 import { useExercises } from '../hooks/useStorage';
+import { useCustomAlert } from '../hooks/useCustomAlert';
 
 interface AddActivityModalProps {
   visible: boolean;
@@ -29,6 +29,7 @@ interface AddActivityModalProps {
 
 export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivityModalProps) {
   const { exercises, saveExercise } = useExercises();
+  const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
 
   const [activityType, setActivityType] = useState<ActivityType>('exercise');
   const [exerciseType, setExerciseType] = useState<ExerciseType>('time');
@@ -96,17 +97,17 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
 
   const handleAdd = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Por favor ingresa un nombre');
+      showAlert('Error', 'Por favor ingresa un nombre', [], 'close-circle', theme.colors.error);
       return;
     }
 
     if (activityType === 'exercise' && exerciseType === 'time' && (!duration || parseInt(duration) <= 0)) {
-      Alert.alert('Error', 'Por favor ingresa una duración válida');
+      showAlert('Error', 'Por favor ingresa una duración válida', [], 'close-circle', theme.colors.error);
       return;
     }
 
     if (activityType === 'exercise' && exerciseType === 'reps' && (!reps || parseInt(reps) <= 0)) {
-      Alert.alert('Error', 'Por favor ingresa un número de repeticiones válido');
+      showAlert('Error', 'Por favor ingresa un número de repeticiones válido', [], 'close-circle', theme.colors.error);
       return;
     }
 
@@ -410,6 +411,19 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
           onSelect={handleDurationSelect}
           initialSeconds={parseInt(duration) || 30}
         />
+
+        {/* Custom Alert */}
+        {alertConfig && (
+          <CustomAlert
+            visible={alertVisible}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            buttons={alertConfig.buttons}
+            icon={alertConfig.icon}
+            iconColor={alertConfig.iconColor}
+            onDismiss={hideAlert}
+          />
+        )}
       </KeyboardAvoidingView>
     </Modal>
   );

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useExercises, useRoutines } from '../hooks/useStorage';
 import { ExerciseTemplate } from '../types';
 import * as Haptics from 'expo-haptics';
+import { CustomAlert } from '../components';
+import { useCustomAlert } from '../hooks/useCustomAlert';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageExercises'>;
 
@@ -22,6 +23,7 @@ export default function ManageExercisesScreen({ navigation }: Props) {
   const { exercises, deleteExercise } = useExercises();
   const { routines } = useRoutines();
   const insets = useSafeAreaInsets();
+  const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
 
   // Calcular qué ejercicios están en uso
   const exercisesInUse = useMemo(() => {
@@ -56,16 +58,18 @@ export default function ManageExercisesScreen({ navigation }: Props) {
   const handleDeleteExercise = (exercise: ExerciseTemplate) => {
     if (exercisesInUse.has(exercise.id)) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
+      showAlert(
         'No se puede eliminar',
         'Este ejercicio está siendo usado en una o más rutinas. Elimina esas rutinas primero.',
-        [{ text: 'Entendido' }]
+        [{ text: 'Entendido' }],
+        'alert-circle',
+        theme.colors.warning
       );
       return;
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
+    showAlert(
       'Eliminar Ejercicio',
       `¿Estás seguro que deseas eliminar "${exercise.name}"?`,
       [
@@ -153,6 +157,19 @@ export default function ManageExercisesScreen({ navigation }: Props) {
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
         </>
+      )}
+
+      {/* Custom Alert */}
+      {alertConfig && (
+        <CustomAlert
+          visible={alertVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          buttons={alertConfig.buttons}
+          icon={alertConfig.icon}
+          iconColor={alertConfig.iconColor}
+          onDismiss={hideAlert}
+        />
       )}
     </SafeAreaView>
   );
