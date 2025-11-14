@@ -123,6 +123,18 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     ]);
   };
 
+  const handleReorderBlocks = (newBlocks: Block[]) => {
+    setBlocks(newBlocks);
+  };
+
+  const handleReorderActivities = (blockId: string, newActivities: Activity[]) => {
+    setBlocks(
+      blocks.map((block) =>
+        block.id === blockId ? { ...block, activities: newActivities } : block
+      )
+    );
+  };
+
   const handleSaveRoutine = async () => {
     if (!routineName.trim()) {
       showAlert('Error', 'Por favor ingresa un nombre para la rutina', [], 'close-circle', theme.colors.error);
@@ -240,125 +252,159 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     return () => backHandler.remove();
   }, [hasUnsavedChanges, navigation]);
 
-  const renderActivity = (activity: Activity, blockId: string) => {
+  const renderActivity = (
+    params: RenderItemParams<Activity>,
+    blockId: string
+  ) => {
+    const { item: activity, drag, isActive } = params;
+
     return (
-      <View key={activity.id} style={styles.activityItem}>
-        <View style={styles.activityIcon}>
-          <Ionicons
-            name={activity.icon as any}
-            size={24}
-            color={
-              activity.type === 'rest'
-                ? theme.colors.rest
-                : theme.colors.exercise
-            }
-          />
-        </View>
-        <View style={styles.activityInfo}>
-          <Text style={styles.activityName}>{activity.name}</Text>
-          <Text style={styles.activityDetails}>
-            {activity.exerciseType === 'time'
-              ? `${formatTime(activity.duration || 0)}`
-              : `${activity.reps} reps`}
-          </Text>
-        </View>
+      <ScaleDecorator>
         <TouchableOpacity
-          onPress={() => handleDeleteActivity(blockId, activity.id)}
+          onLongPress={drag}
+          disabled={isActive}
+          style={[
+            styles.activityItem,
+            isActive && styles.activityItemDragging,
+          ]}
         >
-          <Ionicons name="close-circle" size={24} color={theme.colors.error} />
+          <TouchableOpacity onPressIn={drag} style={styles.dragHandle}>
+            <Ionicons name="reorder-two" size={24} color={theme.colors.textTertiary} />
+          </TouchableOpacity>
+          <View style={styles.activityIcon}>
+            <Ionicons
+              name={activity.icon as any}
+              size={24}
+              color={
+                activity.type === 'rest'
+                  ? theme.colors.rest
+                  : theme.colors.exercise
+              }
+            />
+          </View>
+          <View style={styles.activityInfo}>
+            <Text style={styles.activityName}>{activity.name}</Text>
+            <Text style={styles.activityDetails}>
+              {activity.exerciseType === 'time'
+                ? `${formatTime(activity.duration || 0)}`
+                : `${activity.reps} reps`}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleDeleteActivity(blockId, activity.id)}
+          >
+            <Ionicons name="close-circle" size={24} color={theme.colors.error} />
+          </TouchableOpacity>
         </TouchableOpacity>
-      </View>
+      </ScaleDecorator>
     );
   };
 
-  const renderBlock = (block: Block, index: number) => {
+  const renderBlock = (params: RenderItemParams<Block>) => {
+    const { item: block, drag, isActive } = params;
+
     return (
-      <Card key={block.id} style={styles.blockCard}>
-        <View style={styles.blockHeader}>
-          <TextInput
-            style={styles.blockNameInput}
-            value={block.name}
-            onChangeText={(text) => handleUpdateBlockName(block.id, text)}
-            placeholder="Nombre del bloque"
-            placeholderTextColor={theme.colors.textTertiary}
-          />
-          {blocks.length > 1 && (
-            <TouchableOpacity onPress={() => handleDeleteBlock(block.id)}>
-              <Ionicons name="trash-outline" size={24} color={theme.colors.error} />
+      <ScaleDecorator>
+        <Card style={[styles.blockCard, isActive && styles.blockCardDragging]}>
+          <View style={styles.blockHeader}>
+            <TouchableOpacity onPressIn={drag} style={styles.dragHandle}>
+              <Ionicons name="menu" size={28} color={theme.colors.textSecondary} />
             </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.repetitionsRow}>
-          <Text style={styles.label}>Repeticiones del bloque:</Text>
-          <View style={styles.counter}>
-            <TouchableOpacity
-              onPress={() =>
-                handleUpdateBlockRepetitions(block.id, block.repetitions - 1)
-              }
-            >
-              <Ionicons name="remove-circle" size={32} color={theme.colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.counterText}>{block.repetitions}</Text>
-            <TouchableOpacity
-              onPress={() =>
-                handleUpdateBlockRepetitions(block.id, block.repetitions + 1)
-              }
-            >
-              <Ionicons name="add-circle" size={32} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {block.activities.length > 0 && (
-          <View style={styles.activitiesList}>
-            {block.activities.map((activity) =>
-              renderActivity(activity, block.id)
+            <TextInput
+              style={styles.blockNameInput}
+              value={block.name}
+              onChangeText={(text) => handleUpdateBlockName(block.id, text)}
+              placeholder="Nombre del bloque"
+              placeholderTextColor={theme.colors.textTertiary}
+            />
+            {blocks.length > 1 && (
+              <TouchableOpacity onPress={() => handleDeleteBlock(block.id)}>
+                <Ionicons name="trash-outline" size={24} color={theme.colors.error} />
+              </TouchableOpacity>
             )}
           </View>
-        )}
 
-        <Button
-          title="+ Agregar Actividad"
-          onPress={() => {
-            setSelectedBlockId(block.id);
-            setShowAddActivity(true);
-          }}
-          variant="outline"
-          size="small"
-          fullWidth
-        />
-      </Card>
+          <View style={styles.repetitionsRow}>
+            <Text style={styles.label}>Repeticiones del bloque:</Text>
+            <View style={styles.counter}>
+              <TouchableOpacity
+                onPress={() =>
+                  handleUpdateBlockRepetitions(block.id, block.repetitions - 1)
+                }
+              >
+                <Ionicons name="remove-circle" size={32} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.counterText}>{block.repetitions}</Text>
+              <TouchableOpacity
+                onPress={() =>
+                  handleUpdateBlockRepetitions(block.id, block.repetitions + 1)
+                }
+              >
+                <Ionicons name="add-circle" size={32} color={theme.colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {block.activities.length > 0 && (
+            <View style={styles.activitiesList}>
+              <DraggableFlatList
+                data={block.activities}
+                renderItem={(itemParams) => renderActivity(itemParams, block.id)}
+                keyExtractor={(item) => item.id}
+                onDragEnd={({ data }) => handleReorderActivities(block.id, data)}
+              />
+            </View>
+          )}
+
+          <Button
+            title="+ Agregar Actividad"
+            onPress={() => {
+              setSelectedBlockId(block.id);
+              setShowAddActivity(true);
+            }}
+            variant="outline"
+            size="small"
+            fullWidth
+          />
+        </Card>
+      </ScaleDecorator>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 160 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.nameSection}>
-          <Text style={styles.label}>Nombre de la rutina</Text>
-          <TextInput
-            style={styles.nameInput}
-            value={routineName}
-            onChangeText={setRoutineName}
-            placeholder="Mi Rutina de Entrenamiento"
-            placeholderTextColor={theme.colors.textTertiary}
+    <GestureHandlerRootView style={styles.container}>
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 160 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.nameSection}>
+            <Text style={styles.label}>Nombre de la rutina</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={routineName}
+              onChangeText={setRoutineName}
+              placeholder="Mi Rutina de Entrenamiento"
+              placeholderTextColor={theme.colors.textTertiary}
+            />
+          </View>
+
+          <DraggableFlatList
+            data={blocks}
+            renderItem={renderBlock}
+            keyExtractor={(item) => item.id}
+            onDragEnd={({ data }) => handleReorderBlocks(data)}
+            containerStyle={styles.blocksList}
           />
-        </View>
 
-        {blocks.map((block, index) => renderBlock(block, index))}
-
-        <Button
-          title="+ Agregar Bloque"
-          onPress={handleAddBlock}
-          variant="ghost"
-          size="medium"
-          fullWidth
-        />
-      </ScrollView>
+          <Button
+            title="+ Agregar Bloque"
+            onPress={handleAddBlock}
+            variant="ghost"
+            size="medium"
+            fullWidth
+          />
+        </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
         <Button
@@ -377,19 +423,20 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
         blockId={selectedBlockId}
       />
 
-      {/* Custom Alert */}
-      {alertConfig && (
-        <CustomAlert
-          visible={alertVisible}
-          title={alertConfig.title}
-          message={alertConfig.message}
-          buttons={alertConfig.buttons}
-          icon={alertConfig.icon}
-          iconColor={alertConfig.iconColor}
-          onDismiss={hideAlert}
-        />
-      )}
-    </View>
+        {/* Custom Alert */}
+        {alertConfig && (
+          <CustomAlert
+            visible={alertVisible}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            buttons={alertConfig.buttons}
+            icon={alertConfig.icon}
+            iconColor={alertConfig.iconColor}
+            onDismiss={hideAlert}
+          />
+        )}
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -479,6 +526,29 @@ const styles = StyleSheet.create({
   activityDetails: {
     ...theme.typography.caption,
     color: theme.colors.textSecondary,
+  },
+  dragHandle: {
+    padding: theme.spacing.xs,
+    marginRight: theme.spacing.sm,
+  },
+  activityItemDragging: {
+    opacity: 0.7,
+    backgroundColor: theme.colors.primary + '20',
+  },
+  blockCardDragging: {
+    opacity: 0.8,
+    transform: [{ scale: 1.02 }],
+    shadowColor: theme.colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  blocksList: {
+    width: '100%',
   },
   footer: {
     position: 'absolute',
