@@ -143,6 +143,27 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         setIsProcessingPending(false);
         setCurrentPendingIndex(0);
 
+        // Verificar si estábamos en el último bloque y última rep
+        // En ese caso, la rutina está completa
+        if (isLastRepOfBlock && isLastBlock) {
+          setIsComplete(true);
+
+          // Guardar en el historial
+          await saveCompletedWorkout();
+
+          Alert.alert(
+            '¡Rutina Completada!',
+            'Has terminado tu entrenamiento',
+            [
+              {
+                text: 'Finalizar',
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+          return;
+        }
+
         // Ahora sí avanzar al siguiente bloque o repetición
         if (isLastRepOfBlock) {
           // Siguiente bloque
