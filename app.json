@@ -54,8 +54,8 @@
           "icon": "./assets/icon.png",
           "color": "#FF6B35",
           "sounds": [
-            "./assets/sounds/exercise-done-alert.wav",
-            "./assets/sounds/routine-done-alert.wav"
+            "./assets/sounds/exercise_done_alert.wav",
+            "./assets/sounds/routine_done_alert.wav"
           ]
         }
       ]

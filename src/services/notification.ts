@@ -62,28 +62,28 @@ class NotificationService {
 
       // Cargar sonido de ejercicio completado
       const { sound: exerciseSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/exercise-done-alert.wav'),
+        require('../../assets/sounds/exercise_done_alert.wav'),
         { shouldPlay: false }
       );
       this.exerciseSound = exerciseSound;
 
       // Cargar sonido de rutina completada
       const { sound: routineSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/routine-done-alert.wav'),
+        require('../../assets/sounds/routine_done_alert.wav'),
         { shouldPlay: false }
       );
       this.routineSound = routineSound;
 
       // Cargar sonido de pausa
       const { sound: pauseSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/pause-alert.wav'),
+        require('../../assets/sounds/pause_alert.wav'),
         { shouldPlay: false }
       );
       this.pauseSound = pauseSound;
 
       // Cargar sonido de reanudación
       const { sound: resumeSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/resume-alert.wav'),
+        require('../../assets/sounds/resume_alert.wav'),
         { shouldPlay: false }
       );
       this.resumeSound = resumeSound;
