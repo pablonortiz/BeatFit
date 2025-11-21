@@ -190,6 +190,17 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     );
   };
 
+  const handleUpdateBlockRestBetweenReps = (blockId: string, rest: number) => {
+    if (rest < 0) return;
+    setBlocks(
+      blocks.map((block) =>
+        block.id === blockId
+          ? { ...block, restBetweenReps: rest > 0 ? rest : undefined }
+          : block,
+      ),
+    );
+  };
+
   const handleAddActivity = (activity: Activity) => {
     setBlocks(
       blocks.map((block) =>
@@ -226,6 +237,72 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
         },
       ],
     );
+  };
+
+  const handleDuplicateActivity = (blockId: string, activity: Activity) => {
+    const duplicatedActivity: Activity = {
+      ...activity,
+      id: generateId(),
+    };
+
+    setBlocks(
+      blocks.map((block) =>
+        block.id === blockId
+          ? {
+              ...block,
+              activities: [
+                ...block.activities.slice(
+                  0,
+                  block.activities.findIndex((a) => a.id === activity.id) + 1,
+                ),
+                duplicatedActivity,
+                ...block.activities.slice(
+                  block.activities.findIndex((a) => a.id === activity.id) + 1,
+                ),
+              ],
+            }
+          : block,
+      ),
+    );
+  };
+
+  const handleDuplicateBlock = (blockId: string) => {
+    const blockToDuplicate = blocks.find((b) => b.id === blockId);
+    if (!blockToDuplicate) return;
+
+    // No permitir duplicar bloques especiales
+    if (
+      blockToDuplicate.type === "warmup" ||
+      blockToDuplicate.type === "cooldown" ||
+      blockToDuplicate.type === "rest-block"
+    ) {
+      return;
+    }
+
+    // Duplicar actividades con nuevos IDs
+    const duplicatedActivities = blockToDuplicate.activities.map(
+      (activity) => ({
+        ...activity,
+        id: generateId(),
+      }),
+    );
+
+    const duplicatedBlock: Block = {
+      ...blockToDuplicate,
+      id: generateId(),
+      name: `${blockToDuplicate.name} (copia)`,
+      activities: duplicatedActivities,
+    };
+
+    setBlocks((prevBlocks) => {
+      const targetIndex = prevBlocks.findIndex((b) => b.id === blockId);
+      if (targetIndex === -1) return prevBlocks;
+
+      const newBlocks = [...prevBlocks];
+      // Insertar después del bloque original
+      newBlocks.splice(targetIndex + 1, 0, duplicatedBlock);
+      return newBlocks;
+    });
   };
 
   const handleEditActivity = (blockId: string, activity: Activity) => {
@@ -514,6 +591,16 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
 
           <View style={styles.activityActions}>
             <TouchableOpacity
+              onPress={() => handleDuplicateActivity(blockId, activity)}
+              style={styles.activityActionButton}
+            >
+              <Ionicons
+                name="copy-outline"
+                size={20}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={() => handleEditActivity(blockId, activity)}
               style={styles.activityActionButton}
             >
@@ -581,13 +668,27 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                 placeholder={t("createRoutine.blockNamePlaceholder")}
                 placeholderTextColor={theme.colors.textTertiary}
               />
-              <TouchableOpacity onPress={() => handleDeleteBlock(block.id)}>
-                <Ionicons
-                  name="trash-outline"
-                  size={24}
-                  color={theme.colors.error}
-                />
-              </TouchableOpacity>
+              <View style={styles.blockHeaderActions}>
+                {block.type === "normal" && (
+                  <TouchableOpacity
+                    onPress={() => handleDuplicateBlock(block.id)}
+                    style={styles.blockActionButton}
+                  >
+                    <Ionicons
+                      name="copy-outline"
+                      size={22}
+                      color={theme.colors.primary}
+                    />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => handleDeleteBlock(block.id)}>
+                  <Ionicons
+                    name="trash-outline"
+                    size={24}
+                    color={theme.colors.error}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Indicador de bloque vacío */}
@@ -641,6 +742,64 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Descanso entre repeticiones (solo si hay más de 1 repetición) */}
+            {block.repetitions > 1 && (
+              <View style={styles.restBetweenRepsSection}>
+                <View style={styles.restBetweenRepsHeader}>
+                  <Ionicons
+                    name="pause-circle-outline"
+                    size={20}
+                    color={theme.colors.rest}
+                  />
+                  <Text style={styles.restBetweenRepsLabel}>
+                    Descanso entre repeticiones (opcional)
+                  </Text>
+                </View>
+                <View style={styles.counter}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const currentRest = block.restBetweenReps || 0;
+                      handleUpdateBlockRestBetweenReps(
+                        block.id,
+                        Math.max(0, currentRest - 10),
+                      );
+                    }}
+                  >
+                    <Ionicons
+                      name="remove-circle"
+                      size={32}
+                      color={theme.colors.rest}
+                    />
+                  </TouchableOpacity>
+                  <View style={styles.restTimeDisplay}>
+                    <Text style={styles.restTimeText}>
+                      {block.restBetweenReps
+                        ? `${block.restBetweenReps}s`
+                        : "Sin descanso"}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      const currentRest = block.restBetweenReps || 0;
+                      handleUpdateBlockRestBetweenReps(block.id, currentRest + 10);
+                    }}
+                  >
+                    <Ionicons
+                      name="add-circle"
+                      size={32}
+                      color={theme.colors.rest}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {block.restBetweenReps && block.restBetweenReps > 0 && (
+                  <Text style={styles.restBetweenRepsHint}>
+                    Se agregará un descanso de {block.restBetweenReps} segundos entre
+                    cada repetición de este bloque
+                  </Text>
+                )}
+              </View>
+            )}
 
             {/* Lista de actividades con drag and drop */}
             {block.activities.length > 0 && (
@@ -1048,6 +1207,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: theme.spacing.md,
   },
+  blockHeaderActions: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    alignItems: "center",
+  },
+  blockActionButton: {
+    padding: theme.spacing.xs,
+  },
   blockNameInput: {
     flex: 1,
     ...theme.typography.h4,
@@ -1057,7 +1224,7 @@ const styles = StyleSheet.create({
   repetitionsRow: {
     flexDirection: "column",
     alignItems: "flex-start",
-    marginBottom: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
     gap: theme.spacing.sm,
   },
   counter: {
@@ -1069,6 +1236,46 @@ const styles = StyleSheet.create({
     ...theme.typography.h3,
     minWidth: 32,
     textAlign: "center",
+  },
+  restBetweenRepsSection: {
+    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.rest + "10",
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.rest + "30",
+    gap: theme.spacing.sm,
+  },
+  restBetweenRepsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.xs,
+  },
+  restBetweenRepsLabel: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+  },
+  restTimeDisplay: {
+    minWidth: 120,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.borderRadius.md,
+    alignItems: "center",
+  },
+  restTimeText: {
+    ...theme.typography.bodyBold,
+    color: theme.colors.rest,
+    fontSize: 16,
+  },
+  restBetweenRepsHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontStyle: "italic",
+    marginTop: theme.spacing.xs,
   },
   activitiesList: {
     marginBottom: theme.spacing.md,

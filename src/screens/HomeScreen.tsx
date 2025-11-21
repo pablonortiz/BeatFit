@@ -44,36 +44,55 @@ export default function HomeScreen({ navigation }: Props) {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Card style={styles.modeCard}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="list" size={40} color={theme.colors.primary} />
+        {/* Sección principal: Mis Rutinas */}
+        <Card style={styles.primaryCard}>
+          <View style={styles.primaryCardHeader}>
+            <View>
+              <Text style={styles.primaryCardTitle}>
+                {t("home.myRoutines")}
+              </Text>
+              <Text style={styles.primaryCardSubtitle}>
+                Accede a tus entrenamientos
+              </Text>
+            </View>
+            <View style={styles.primaryIconContainer}>
+              <Ionicons
+                name="folder-open"
+                size={40}
+                color={theme.colors.primary}
+              />
+            </View>
           </View>
-          <Text style={styles.modeTitle}>{t("home.createRoutine")}</Text>
-          <Text style={styles.modeDescription}>
-            {t("home.createRoutineDesc")}
-          </Text>
           <Button
-            title={t("home.createRoutine")}
-            onPress={() => navigation.navigate("CreateRoutine", {})}
+            title="Ver mis rutinas"
+            onPress={() => navigation.navigate("RoutinesList")}
             variant="primary"
             fullWidth
-            style={styles.modeButton}
+            style={styles.primaryButton}
           />
-        </Card>
 
-        <View style={styles.actionsRow}>
+          {/* Botón secundario para crear rutina */}
           <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => navigation.navigate("RoutinesList")}
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate("CreateRoutine", {})}
           >
             <Ionicons
-              name="folder-open"
-              size={32}
-              color={theme.colors.secondary}
+              name="add-circle"
+              size={20}
+              color={theme.colors.primary}
             />
-            <Text style={styles.actionText}>{t("home.myRoutines")}</Text>
+            <Text style={styles.secondaryButtonText}>
+              {t("home.createRoutine")}
+            </Text>
           </TouchableOpacity>
+        </Card>
 
+        {/* Accesos rápidos */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Accesos rápidos</Text>
+        </View>
+
+        <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => navigation.navigate("WorkoutHistory")}
@@ -81,9 +100,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Ionicons name="calendar" size={32} color={theme.colors.accent} />
             <Text style={styles.actionText}>{t("home.workoutHistory")}</Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => navigation.navigate("Stats")}
@@ -95,7 +112,9 @@ export default function HomeScreen({ navigation }: Props) {
             />
             <Text style={styles.actionText}>{t("stats.title")}</Text>
           </TouchableOpacity>
+        </View>
 
+        <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => navigation.navigate("ManageExercises")}
@@ -103,9 +122,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Ionicons name="barbell" size={32} color={theme.colors.success} />
             <Text style={styles.actionText}>{t("home.manageExercises")}</Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.actionsRow}>
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => navigation.navigate("Settings")}
@@ -150,32 +167,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
   },
-  modeCard: {
-    marginBottom: theme.spacing.md,
-    alignItems: "center",
-    paddingVertical: theme.spacing.lg,
+  primaryCard: {
+    marginBottom: theme.spacing.lg,
+    padding: theme.spacing.lg,
   },
-  iconContainer: {
-    width: 64,
-    height: 64,
+  primaryCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing.lg,
+  },
+  primaryCardTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  primaryCardSubtitle: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textSecondary,
+  },
+  primaryIconContainer: {
+    width: 56,
+    height: 56,
     borderRadius: theme.borderRadius.lg,
     backgroundColor: theme.colors.backgroundCardLight,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: theme.spacing.sm,
   },
-  modeTitle: {
-    ...theme.typography.h3,
-    marginBottom: theme.spacing.xs,
-  },
-  modeDescription: {
-    ...theme.typography.bodySmall,
-    textAlign: "center",
+  primaryButton: {
     marginBottom: theme.spacing.md,
-    color: theme.colors.textSecondary,
   },
-  modeButton: {
-    minWidth: 200,
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.backgroundCardLight,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.sm,
+  },
+  secondaryButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    fontWeight: "600",
+  },
+  sectionHeader: {
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
+  },
+  sectionTitle: {
+    ...theme.typography.h4,
+    color: theme.colors.textSecondary,
+    textTransform: "uppercase",
+    fontSize: 12,
+    letterSpacing: 1,
+    fontWeight: "600",
   },
   actionsRow: {
     flexDirection: "row",

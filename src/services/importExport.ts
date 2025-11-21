@@ -112,10 +112,16 @@ class ImportExportService {
       const existingExercises = await storageService.getExercises();
       const exercisesByName = new Map(existingExercises.map(ex => [ex.name.toLowerCase(), ex]));
 
+      // Obtener rutinas existentes para determinar el orden
+      const existingRoutines = await storageService.getRoutines();
+      const maxOrder = existingRoutines.reduce((max, r) => Math.max(max, r.order ?? 0), -1);
+      
       let importedCount = 0;
 
       // Procesar cada rutina
-      for (const routine of data.routines) {
+      for (let i = 0; i < data.routines.length; i++) {
+        const routine = data.routines[i];
+        
         // Validar estructura de rutina
         if (!routine.name || !routine.blocks || !Array.isArray(routine.blocks)) {
           console.warn('Rutina inválida, saltando:', routine);
@@ -157,6 +163,8 @@ class ImportExportService {
             ...block,
             type: block.type || 'normal', // Valor por defecto si no existe
           })),
+          // Preservar el orden si existe en el archivo importado, si no, asignar secuencialmente
+          order: routine.order !== undefined ? routine.order : maxOrder + 1 + i,
         };
 
         // Guardar la rutina normalizada

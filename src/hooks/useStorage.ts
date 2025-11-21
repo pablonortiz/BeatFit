@@ -66,12 +66,19 @@ export function useRoutines() {
     await loadRoutines();
   }, [loadRoutines]);
 
+  const reorderRoutines = useCallback(async (reorderedRoutines: Routine[]) => {
+    // Guardar el nuevo orden sin recargar para evitar re-renders innecesarios
+    // El componente que llama a esto debería manejar su propio estado local
+    await storageService.reorderRoutines(reorderedRoutines);
+  }, []);
+
   return {
     routines,
     loading,
     saveRoutine,
     updateRoutine,
     deleteRoutine,
+    reorderRoutines,
     refresh: loadRoutines,
   };
 }

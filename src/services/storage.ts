@@ -14,6 +14,7 @@ export interface StorageService {
   saveRoutine(routine: Routine): Promise<void>;
   deleteRoutine(id: string): Promise<void>;
   updateRoutine(routine: Routine): Promise<void>;
+  reorderRoutines(routines: Routine[]): Promise<void>;
 
   // Historial de entrenamientos
   getWorkoutHistory(): Promise<WorkoutSession[]>;
@@ -74,7 +75,24 @@ class LocalStorageService implements StorageService {
   async getRoutines(): Promise<Routine[]> {
     try {
       const data = await AsyncStorage.getItem(this.ROUTINES_KEY);
-      return data ? JSON.parse(data) : [];
+      const routines: Routine[] = data ? JSON.parse(data) : [];
+      
+      // Asignar orden si no existe (migración de datos existentes)
+      let needsUpdate = false;
+      routines.forEach((routine, index) => {
+        if (routine.order === undefined) {
+          routine.order = index;
+          needsUpdate = true;
+        }
+      });
+      
+      // Guardar si hubo cambios
+      if (needsUpdate) {
+        await AsyncStorage.setItem(this.ROUTINES_KEY, JSON.stringify(routines));
+      }
+      
+      // Ordenar por campo order (ascendente)
+      return routines.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     } catch (error) {
       console.error('Error loading routines:', error);
       return [];
@@ -87,9 +105,18 @@ class LocalStorageService implements StorageService {
       const existingIndex = routines.findIndex(r => r.id === routine.id);
 
       if (existingIndex >= 0) {
-        routines[existingIndex] = routine;
+        // Actualizar rutina existente, preservar el order si existe
+        routines[existingIndex] = {
+          ...routine,
+          order: routine.order !== undefined ? routine.order : routines[existingIndex].order,
+        };
       } else {
-        routines.push(routine);
+        // Nueva rutina: asignar el siguiente número de orden
+        const maxOrder = routines.reduce((max, r) => Math.max(max, r.order ?? 0), -1);
+        routines.push({
+          ...routine,
+          order: routine.order !== undefined ? routine.order : maxOrder + 1,
+        });
       }
 
       await AsyncStorage.setItem(this.ROUTINES_KEY, JSON.stringify(routines));
@@ -107,9 +134,30 @@ class LocalStorageService implements StorageService {
     try {
       const routines = await this.getRoutines();
       const filtered = routines.filter(r => r.id !== id);
+      
+      // Reajustar los órdenes después de eliminar
+      filtered.forEach((routine, index) => {
+        routine.order = index;
+      });
+      
       await AsyncStorage.setItem(this.ROUTINES_KEY, JSON.stringify(filtered));
     } catch (error) {
       console.error('Error deleting routine:', error);
+      throw error;
+    }
+  }
+
+  async reorderRoutines(routines: Routine[]): Promise<void> {
+    try {
+      // Actualizar el campo order de cada rutina según su nueva posición
+      const reordered = routines.map((routine, index) => ({
+        ...routine,
+        order: index,
+      }));
+      
+      await AsyncStorage.setItem(this.ROUTINES_KEY, JSON.stringify(reordered));
+    } catch (error) {
+      console.error('Error reordering routines:', error);
       throw error;
     }
   }

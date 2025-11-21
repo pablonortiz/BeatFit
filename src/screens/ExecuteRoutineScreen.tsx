@@ -12,10 +12,11 @@ import {
   AppStateStatus,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { theme } from "../theme";
-import { Button, CustomAlert } from "../components";
+import { Button, CustomAlert, UpcomingActivitiesSheet } from "../components";
 import { Ionicons } from "@expo/vector-icons";
 import { Activity, Block, WorkoutSession, ExecutedActivity } from "../types";
 import { formatTime, generateId, formatTimeLong } from "../utils/helpers";
@@ -423,8 +424,30 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         setCurrentActivityIndex(0);
       } else {
         // Siguiente repetición del bloque
-        setCurrentBlockRep(currentBlockRep + 1);
-        setCurrentActivityIndex(0);
+        // Verificar si hay descanso configurado entre repeticiones
+        if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
+          // Crear actividad de descanso temporal y agregarla a pendientes
+          const restActivity: Activity = {
+            id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
+            type: 'rest',
+            name: 'Descanso entre repeticiones',
+            icon: 'pause-circle',
+            exerciseType: 'time',
+            duration: currentBlock.restBetweenReps,
+          };
+          
+          // Agregar el descanso como pendiente para que se ejecute ahora
+          setPendingActivities((prev) => [restActivity, ...prev]);
+          setIsProcessingPending(true);
+          setCurrentPendingIndex(0);
+          
+          // Ya avanzamos la repetición para que después del descanso continúe normalmente
+          setCurrentBlockRep(currentBlockRep + 1);
+          setCurrentActivityIndex(0);
+        } else {
+          setCurrentBlockRep(currentBlockRep + 1);
+          setCurrentActivityIndex(0);
+        }
       }
     } else {
       // Siguiente actividad en el bloque
@@ -730,8 +753,26 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           setCurrentBlockRep(0);
           setCurrentActivityIndex(0);
         } else {
-          setCurrentBlockRep(currentBlockRep + 1);
-          setCurrentActivityIndex(0);
+          // Verificar si hay descanso configurado entre repeticiones
+          if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
+            const restActivity: Activity = {
+              id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
+              type: 'rest',
+              name: 'Descanso entre repeticiones',
+              icon: 'pause-circle',
+              exerciseType: 'time',
+              duration: currentBlock.restBetweenReps,
+            };
+            
+            setPendingActivities((prev) => [restActivity, ...prev]);
+            setIsProcessingPending(true);
+            setCurrentPendingIndex(0);
+            setCurrentBlockRep(currentBlockRep + 1);
+            setCurrentActivityIndex(0);
+          } else {
+            setCurrentBlockRep(currentBlockRep + 1);
+            setCurrentActivityIndex(0);
+          }
         }
       } else {
         setCurrentPendingIndex(currentPendingIndex + 1);
@@ -793,8 +834,26 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           setCurrentBlockRep(0);
           setCurrentActivityIndex(0);
         } else {
-          setCurrentBlockRep(currentBlockRep + 1);
-          setCurrentActivityIndex(0);
+          // Verificar si hay descanso configurado entre repeticiones
+          if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
+            const restActivity: Activity = {
+              id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
+              type: 'rest',
+              name: 'Descanso entre repeticiones',
+              icon: 'pause-circle',
+              exerciseType: 'time',
+              duration: currentBlock.restBetweenReps,
+            };
+            
+            setPendingActivities((prev) => [restActivity, ...prev]);
+            setIsProcessingPending(true);
+            setCurrentPendingIndex(0);
+            setCurrentBlockRep(currentBlockRep + 1);
+            setCurrentActivityIndex(0);
+          } else {
+            setCurrentBlockRep(currentBlockRep + 1);
+            setCurrentActivityIndex(0);
+          }
         }
       } else {
         setCurrentActivityIndex(currentActivityIndex + 1);
@@ -837,8 +896,26 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         setCurrentBlockRep(0);
         setCurrentActivityIndex(0);
       } else {
-        setCurrentBlockRep(currentBlockRep + 1);
-        setCurrentActivityIndex(0);
+        // Verificar si hay descanso configurado entre repeticiones
+        if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
+          const restActivity: Activity = {
+            id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
+            type: 'rest',
+            name: 'Descanso entre repeticiones',
+            icon: 'pause-circle',
+            exerciseType: 'time',
+            duration: currentBlock.restBetweenReps,
+          };
+          
+          setPendingActivities((prev) => [restActivity, ...prev]);
+          setIsProcessingPending(true);
+          setCurrentPendingIndex(0);
+          setCurrentBlockRep(currentBlockRep + 1);
+          setCurrentActivityIndex(0);
+        } else {
+          setCurrentBlockRep(currentBlockRep + 1);
+          setCurrentActivityIndex(0);
+        }
       }
     } else {
       setCurrentActivityIndex(currentActivityIndex + 1);
@@ -1042,10 +1119,11 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   }
 
   return (
-    <SafeAreaView
-      style={[styles.container, isRestActivity && styles.containerRest]}
-      edges={["top", "bottom"]}
-    >
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView
+        style={[styles.container, isRestActivity && styles.containerRest]}
+        edges={["top", "bottom"]}
+      >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleStop}>
@@ -1469,7 +1547,21 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           onDismiss={hideAlert}
         />
       )}
-    </SafeAreaView>
+
+      {/* Upcoming Activities Sheet */}
+      {!isComplete && currentActivity && (
+        <UpcomingActivitiesSheet
+          blocks={routine.blocks}
+          currentBlockIndex={currentBlockIndex}
+          currentBlockRep={currentBlockRep}
+          currentActivityIndex={currentActivityIndex}
+          isProcessingPending={isProcessingPending}
+          pendingActivities={pendingActivities}
+          currentPendingIndex={currentPendingIndex}
+        />
+      )}
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 }
 

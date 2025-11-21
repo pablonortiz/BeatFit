@@ -64,6 +64,9 @@
     "activities_plural": "{{count}} atividades",
     "estimatedTime": "~{{time}}"
   },
+  "viewRoutine": {
+    "title": "Detalhes da Rotina"
+  },
   "createRoutine": {
     "title": "Nova Rotina",
     "editTitle": "Editar Rotina",

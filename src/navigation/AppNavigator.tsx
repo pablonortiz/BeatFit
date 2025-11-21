@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import HomeScreen from '../screens/HomeScreen';
 import RoutinesListScreen from '../screens/RoutinesListScreen';
 import CreateRoutineScreen from '../screens/CreateRoutineScreen';
+import ViewRoutineScreen from '../screens/ViewRoutineScreen';
 import ExecuteRoutineScreen from '../screens/ExecuteRoutineScreen';
 import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
 import WorkoutDetailScreen from '../screens/WorkoutDetailScreen';
@@ -67,6 +68,11 @@ function Navigator() {
         name="CreateRoutine"
         component={CreateRoutineScreen}
         options={{ title: t('createRoutine.title') }}
+      />
+      <Stack.Screen
+        name="ViewRoutine"
+        component={ViewRoutineScreen}
+        options={{ title: t('viewRoutine.title') }}
       />
       <Stack.Screen
         name="ExecuteRoutine"

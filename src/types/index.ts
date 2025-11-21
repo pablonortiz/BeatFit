@@ -52,6 +52,7 @@ export interface Block {
   activities: Activity[];
   repetitions: number; // Cuántas veces se repite este bloque
   type?: BlockType; // Tipo de bloque: normal, warmup (calentamiento), cooldown (elongación)
+  restBetweenReps?: number; // Descanso en segundos entre repeticiones del bloque (opcional)
 }
 
 // Rutina completa
@@ -61,6 +62,7 @@ export interface Routine {
   blocks: Block[];
   createdAt: number;
   lastUsed?: number;
+  order?: number; // Orden personalizado por el usuario
   syncedToCloud?: boolean; // Para futuro sync con base de datos
 }
 
