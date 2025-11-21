@@ -1,5 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+
+// Configurar el comportamiento de las notificaciones
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    priority: Notifications.AndroidNotificationPriority.MAX,
+  }),
+});
 
 class NotificationService {
   private exerciseSound: Audio.Sound | null = null;
@@ -7,15 +19,45 @@ class NotificationService {
   private pauseSound: Audio.Sound | null = null;
   private resumeSound: Audio.Sound | null = null;
   private isInitialized = false;
+  private workoutNotificationId: string | null = null;
 
   async initialize() {
     try {
-      // Configurar el modo de audio para NO pausar la música de otras apps
+      // Solicitar permisos de notificación
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.warn('Permisos de notificación no concedidos');
+      }
+
+      // Configurar el canal de notificaciones para Android
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('workout', {
+          name: 'Entrenamiento en progreso',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF6B35',
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: true,
+          enableVibrate: true,
+          showBadge: false,
+        });
+      }
+
+      // Configurar el modo de audio para funcionar en background
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-        shouldDuckAndroid: true, // Reduce el volumen de otras apps temporalmente
+        staysActiveInBackground: true, // IMPORTANTE: Activar background
+        shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
+        interruptionModeIOS: 1, // No interrumpir música de otras apps
+        interruptionModeAndroid: 1,
       });
 
       // Cargar sonido de ejercicio completado
@@ -119,8 +161,135 @@ class NotificationService {
     ]);
   }
 
+  /**
+   * Crear o actualizar la notificación persistente del entrenamiento
+   */
+  async updateWorkoutNotification(data: {
+    routineName: string;
+    currentExercise: string;
+    elapsedTime: string;
+    progress: number;
+    isPaused?: boolean;
+    exerciseTime?: string;
+  }) {
+    try {
+      const { routineName, currentExercise, elapsedTime, progress, isPaused, exerciseTime } = data;
+
+      const title = isPaused ? '⏸️ Entrenamiento en pausa' : '🏃 Entrenamiento en progreso';
+      const progressPercent = Math.round(progress * 100);
+      
+      let body = `${routineName}\n`;
+      body += `⏱️ Tiempo: ${elapsedTime}\n`;
+      body += `💪 ${currentExercise}`;
+      if (exerciseTime) {
+        body += ` - ${exerciseTime}`;
+      }
+      body += `\n📊 Progreso: ${progressPercent}%`;
+
+      const notificationContent: Notifications.NotificationContentInput = {
+        title,
+        body,
+        sound: false, // Sin sonido en la actualización
+        priority: Notifications.AndroidNotificationPriority.MAX,
+        sticky: true,
+        data: {
+          type: 'workout-progress',
+          routineName,
+        },
+      };
+
+      if (Platform.OS === 'android') {
+        notificationContent.channelId = 'workout';
+        notificationContent.autoDismiss = false;
+      }
+
+      if (this.workoutNotificationId) {
+        // Actualizar notificación existente
+        await Notifications.dismissNotificationAsync(this.workoutNotificationId);
+      }
+
+      // Crear nueva notificación
+      const identifier = await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: null, // Mostrar inmediatamente
+      });
+
+      this.workoutNotificationId = identifier;
+    } catch (error) {
+      console.error('Error actualizando notificación de entrenamiento:', error);
+    }
+  }
+
+  /**
+   * Cancelar la notificación persistente del entrenamiento
+   */
+  async clearWorkoutNotification() {
+    try {
+      if (this.workoutNotificationId) {
+        await Notifications.dismissNotificationAsync(this.workoutNotificationId);
+        this.workoutNotificationId = null;
+      }
+    } catch (error) {
+      console.error('Error limpiando notificación de entrenamiento:', error);
+    }
+  }
+
+  /**
+   * Enviar notificación de ejercicio completado (sonido + vibración + notificación temporal)
+   */
+  async notifyExerciseComplete(exerciseName: string) {
+    try {
+      await Promise.all([
+        this.playExerciseCompletionSound(),
+        this.vibrate(),
+      ]);
+
+      // Notificación temporal (se descarta automáticamente)
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '✅ Ejercicio completado',
+          body: exerciseName,
+          sound: false, // Ya reproducimos el sonido manualmente
+          priority: Notifications.AndroidNotificationPriority.DEFAULT,
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error('Error en notificación de ejercicio completado:', error);
+    }
+  }
+
+  /**
+   * Enviar notificación de rutina completada
+   */
+  async notifyRoutineComplete(routineName: string, totalTime: string) {
+    try {
+      await Promise.all([
+        this.playRoutineCompletionSound(),
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+      ]);
+
+      await this.clearWorkoutNotification();
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🎉 ¡Rutina completada!',
+          body: `${routineName}\n⏱️ Tiempo total: ${totalTime}`,
+          sound: false,
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error('Error en notificación de rutina completada:', error);
+    }
+  }
+
   async cleanup() {
     try {
+      // Limpiar notificación persistente
+      await this.clearWorkoutNotification();
+
       if (this.exerciseSound) {
         await this.exerciseSound.unloadAsync();
         this.exerciseSound = null;

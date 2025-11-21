@@ -30,7 +30,10 @@
       "package": "com.beatfit.app",
       "permissions": [
         "VIBRATE",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "WAKE_LOCK"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -44,7 +47,18 @@
     },
     "plugins": [
       "./plugins/withAndroidXFix.js",
-      "./plugins/withVoiceConfig.js"
+      "./plugins/withVoiceConfig.js",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF6B35",
+          "sounds": [
+            "./assets/sounds/exercise-done-alert.wav",
+            "./assets/sounds/routine-done-alert.wav"
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {

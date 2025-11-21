@@ -119,6 +119,18 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     };
   }, []);
 
+  // Limpiar notificación cuando se complete la rutina
+  useEffect(() => {
+    if (isComplete) {
+      // Esperar un poco para que se vea la notificación de rutina completada
+      const timer = setTimeout(() => {
+        notificationService.clearWorkoutNotification();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isComplete]);
+
   // Validar que no haya bloques vacíos
   useEffect(() => {
     const emptyBlocks = routine.blocks.filter(
@@ -187,6 +199,44 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   useEffect(() => {
     timeRemainingRef.current = timeRemaining;
   }, [timeRemaining]);
+
+  // Actualizar notificación persistente cuando cambie el estado del entrenamiento
+  useEffect(() => {
+    if (isComplete || !currentActivity) {
+      return;
+    }
+
+    const updateNotification = () => {
+      const exerciseName = currentActivity.name;
+      const elapsedTimeFormatted = formatElapsedTime(elapsedTime);
+      
+      let exerciseTime = '';
+      if (currentActivity.exerciseType === 'time' && currentActivity.duration) {
+        exerciseTime = formatTime(timeRemaining > 0 ? timeRemaining : 0);
+      } else if (currentActivity.exerciseType === 'reps' && currentActivity.reps) {
+        exerciseTime = `${currentActivity.reps} reps`;
+      }
+
+      notificationService.updateWorkoutNotification({
+        routineName: routine.name,
+        currentExercise: exerciseName,
+        elapsedTime: elapsedTimeFormatted,
+        progress: progress,
+        isPaused: isPaused,
+        exerciseTime: exerciseTime,
+      });
+    };
+
+    updateNotification();
+  }, [
+    currentActivity,
+    elapsedTime,
+    timeRemaining,
+    isPaused,
+    progress,
+    isComplete,
+    routine.name,
+  ]);
 
   // Manejar cuando la app va a segundo plano y vuelve
   useEffect(() => {
@@ -283,10 +333,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
   // Función para avanzar a la siguiente actividad
   const goToNextActivity = useCallback(async () => {
-    // Haptic feedback al completar actividad
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    // Reproducir notificación
-    await notificationService.playNotification();
+    // Notificar ejercicio completado (sonido + vibración + notificación)
+    await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
     // Si estamos procesando pendientes
     if (isProcessingPending) {
@@ -701,8 +749,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setShowSkipModal(false);
 
-    // Avanzar sin usar goToNextActivity (que también registraría)
-    await notificationService.playNotification();
+    // Notificar ejercicio saltado
+    await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
     if (isProcessingPending) {
       // Registrar actividad como saltada
@@ -728,7 +776,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           if (isLastPendingActivity && isLastRepOfBlock && isLastBlock) {
             setTimeout(async () => {
               setIsComplete(true);
-              await notificationService.playRoutineCompletion();
+              const totalTime = formatElapsedTime(elapsedTime);
+              await notificationService.notifyRoutineComplete(routine.name, totalTime);
             }, 0);
           }
 
@@ -806,7 +855,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           ) {
             setTimeout(async () => {
               setIsComplete(true);
-              await notificationService.playRoutineCompletion();
+              const totalTime = formatElapsedTime(elapsedTime);
+              await notificationService.notifyRoutineComplete(routine.name, totalTime);
             }, 0);
           }
 
@@ -887,8 +937,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     setCurrentActivityStartTime(Date.now());
     setCurrentActivityPausedTime(0);
 
-    // Avanzar sin usar goToNextActivity
-    await notificationService.playNotification();
+    // Notificar ejercicio postergado
+    await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
     if (isLastActivityInBlock) {
       if (isLastRepOfBlock) {
