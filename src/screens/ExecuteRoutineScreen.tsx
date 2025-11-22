@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Activity, Block, WorkoutSession, ExecutedActivity } from "../types";
 import { formatTime, generateId, formatTimeLong } from "../utils/helpers";
 import { notificationService } from "../services/notification";
+import { nativeWorkoutService } from "../services/nativeWorkoutService";
 import { useVoiceRecognition } from "../hooks/useVoiceRecognition";
 import { useWorkoutHistory } from "../hooks/useStorage";
 import { getBestTimeForRoutine } from "../utils/stats";
@@ -130,6 +131,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Limpiar notificación cuando se complete la rutina
   useEffect(() => {
     if (isComplete) {
+      // Detener servicio nativo
+      nativeWorkoutService.stopService();
+      
       // Esperar un poco para que se vea la notificación de rutina completada
       const timer = setTimeout(() => {
         notificationService.clearWorkoutNotification();
@@ -165,8 +169,25 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     if (!isPaused && !isComplete && currentActivity) {
       setCurrentActivityStartTime(Date.now());
       // NO resetear currentActivityPausedTime aquí - se resetea después de guardar
+      
+      // Actualizar servicio nativo si está en segundo plano
+      if (isInBackgroundRef.current) {
+        nativeWorkoutService.updateWorkoutData({
+          routineName: routine.name,
+          currentExercise: currentActivity.name,
+          startTime: startTime,
+          isPaused: isPaused,
+          pausedAt: pauseStartTime || undefined,
+          totalPausedTime: totalPausedTime,
+          exerciseType: currentActivity.exerciseType,
+          exerciseDuration: currentActivity.duration,
+          exerciseStartTime: Date.now(),
+          exerciseReps: currentActivity.reps,
+          progress: progress,
+        });
+      }
     }
-  }, [currentActivity?.id, isPaused, isComplete]);
+  }, [currentActivity?.id, isPaused, isComplete, progress]);
 
   // Cerrar modal de skip si cambia la actividad mientras está abierto
   useEffect(() => {
@@ -255,7 +276,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   useEffect(() => {
     const subscription = AppState.addEventListener(
       "change",
-      (nextAppState: AppStateStatus) => {
+      async (nextAppState: AppStateStatus) => {
         if (nextAppState === "background" || nextAppState === "inactive") {
           // App va a segundo plano
           console.log(
@@ -265,31 +286,29 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           backgroundTimeRef.current = Date.now();
           isInBackgroundRef.current = true;
           
-          // Mostrar notificación inmediatamente
-          updateNotification();
-          
-          // Actualizar notificación cada 3 segundos mientras esté en segundo plano
-          if (notificationUpdateIntervalRef.current) {
-            clearInterval(notificationUpdateIntervalRef.current);
+          // Iniciar servicio nativo de foreground (actualiza cada segundo)
+          if (currentActivity) {
+            await nativeWorkoutService.startService({
+              routineName: routine.name,
+              currentExercise: currentActivity.name,
+              startTime: startTime,
+              isPaused: isPaused,
+              pausedAt: pauseStartTime || undefined,
+              totalPausedTime: totalPausedTime,
+              exerciseType: currentActivity.exerciseType,
+              exerciseDuration: currentActivity.duration,
+              exerciseStartTime: currentActivityStartTime,
+              exerciseReps: currentActivity.reps,
+              progress: progress,
+            });
           }
-          notificationUpdateIntervalRef.current = setInterval(() => {
-            if (isInBackgroundRef.current && !isComplete) {
-              updateNotification();
-            }
-          }, 3000); // Cada 3 segundos
           
         } else if (nextAppState === "active" && backgroundTimeRef.current) {
           // App vuelve a primer plano
           isInBackgroundRef.current = false;
           
-          // Limpiar el intervalo de actualización
-          if (notificationUpdateIntervalRef.current) {
-            clearInterval(notificationUpdateIntervalRef.current);
-            notificationUpdateIntervalRef.current = null;
-          }
-          
-          // Ocultar la notificación
-          notificationService.clearWorkoutNotification();
+          // Detener servicio nativo de foreground
+          await nativeWorkoutService.stopService();
           
           const timeInBackground = Math.floor(
             (Date.now() - backgroundTimeRef.current) / 1000,
@@ -335,12 +354,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
     return () => {
       subscription.remove();
-      // Limpiar intervalo al desmontar
-      if (notificationUpdateIntervalRef.current) {
-        clearInterval(notificationUpdateIntervalRef.current);
-      }
+      // Limpiar servicio nativo al desmontar
+      nativeWorkoutService.stopService();
     };
-  }, [currentActivity, isPaused, isComplete, goToNextActivity, updateNotification]);
+  }, [currentActivity, isPaused, isComplete, goToNextActivity, startTime, currentActivityStartTime, pauseStartTime, totalPausedTime, progress, routine.name]);
 
   // Función para guardar el entrenamiento completado
   const saveCompletedWorkout = useCallback(async () => {
@@ -735,7 +752,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     return () => backHandler.remove();
   }, [navigation, isComplete, showAlert]);
 
-  const handlePause = () => {
+  const handlePause = async () => {
     // Haptic feedback al pausar/reanudar
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -743,6 +760,23 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       // Pausando: guardar el timestamp actual y reproducir sonido
       setPauseStartTime(Date.now());
       notificationService.playPauseSound();
+      
+      // Actualizar servicio nativo si está en segundo plano
+      if (isInBackgroundRef.current && currentActivity) {
+        await nativeWorkoutService.updateWorkoutData({
+          routineName: routine.name,
+          currentExercise: currentActivity.name,
+          startTime: startTime,
+          isPaused: true,
+          pausedAt: Date.now(),
+          totalPausedTime: totalPausedTime,
+          exerciseType: currentActivity.exerciseType,
+          exerciseDuration: currentActivity.duration,
+          exerciseStartTime: currentActivityStartTime,
+          exerciseReps: currentActivity.reps,
+          progress: progress,
+        });
+      }
     } else {
       // Reanudando: calcular el tiempo pausado y reproducir sonido
       if (pauseStartTime) {
@@ -752,6 +786,23 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         setPauseStartTime(null);
       }
       notificationService.playResumeSound();
+      
+      // Actualizar servicio nativo si está en segundo plano
+      if (isInBackgroundRef.current && currentActivity) {
+        await nativeWorkoutService.updateWorkoutData({
+          routineName: routine.name,
+          currentExercise: currentActivity.name,
+          startTime: startTime,
+          isPaused: false,
+          pausedAt: undefined,
+          totalPausedTime: totalPausedTime,
+          exerciseType: currentActivity.exerciseType,
+          exerciseDuration: currentActivity.duration,
+          exerciseStartTime: currentActivityStartTime,
+          exerciseReps: currentActivity.reps,
+          progress: progress,
+        });
+      }
     }
     setIsPaused(!isPaused);
   };

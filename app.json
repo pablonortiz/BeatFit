@@ -46,6 +46,8 @@
     "plugins": [
       "./plugins/withAndroidXFix.js",
       "./plugins/withVoiceConfig.js",
+      "./plugins/withForegroundService.js",
+      "./modules/workout-notification-service/plugin/withWorkoutNotificationService.js",
       [
         "expo-notifications",
         {
