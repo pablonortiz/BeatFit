@@ -200,9 +200,20 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     timeRemainingRef.current = timeRemaining;
   }, [timeRemaining]);
 
-  // Actualizar notificación persistente cuando cambie el estado del entrenamiento
+  // Actualizar notificación persistente solo cada 5 segundos o cuando cambien factores importantes
   useEffect(() => {
     if (isComplete || !currentActivity) {
+      return;
+    }
+
+    // Solo actualizar cada 5 segundos para tiempo transcurrido
+    // Pero siempre actualizar cuando cambien ejercicio, pausa, o timeRemaining (para ejercicios basados en tiempo)
+    const shouldUpdate = 
+      elapsedTime % 5 === 0 || // Cada 5 segundos
+      isPaused || // Cuando se pausa/reanuda
+      currentActivity.exerciseType === 'time'; // Siempre actualizar para ejercicios de tiempo
+
+    if (!shouldUpdate) {
       return;
     }
 

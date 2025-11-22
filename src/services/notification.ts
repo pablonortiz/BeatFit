@@ -1,7 +1,7 @@
-import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import * as Haptics from "expo-haptics";
+import { Audio } from "expo-av";
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 
 // Configurar el comportamiento de las notificaciones
 Notifications.setNotificationHandler({
@@ -9,7 +9,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    priority: Notifications.AndroidNotificationPriority.MAX,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -24,26 +25,28 @@ class NotificationService {
   async initialize() {
     try {
       // Solicitar permisos de notificación
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      const { status: existingStatus } =
+        await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
+
+      if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
       }
 
-      if (finalStatus !== 'granted') {
-        console.warn('Permisos de notificación no concedidos');
+      if (finalStatus !== "granted") {
+        console.warn("Permisos de notificación no concedidos");
       }
 
       // Configurar el canal de notificaciones para Android
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('workout', {
-          name: 'Entrenamiento en progreso',
+      if (Platform.OS === "android") {
+        await Notifications.setNotificationChannelAsync("workout", {
+          name: "Entrenamiento en progreso",
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#FF6B35',
-          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          lightColor: "#FF6B35",
+          lockscreenVisibility:
+            Notifications.AndroidNotificationVisibility.PUBLIC,
           bypassDnd: true,
           enableVibrate: true,
           showBadge: false,
@@ -62,35 +65,35 @@ class NotificationService {
 
       // Cargar sonido de ejercicio completado
       const { sound: exerciseSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/exercise_done_alert.wav'),
-        { shouldPlay: false }
+        require("../../assets/sounds/exercise_done_alert.wav"),
+        { shouldPlay: false },
       );
       this.exerciseSound = exerciseSound;
 
       // Cargar sonido de rutina completada
       const { sound: routineSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/routine_done_alert.wav'),
-        { shouldPlay: false }
+        require("../../assets/sounds/routine_done_alert.wav"),
+        { shouldPlay: false },
       );
       this.routineSound = routineSound;
 
       // Cargar sonido de pausa
       const { sound: pauseSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/pause_alert.wav'),
-        { shouldPlay: false }
+        require("../../assets/sounds/pause_alert.wav"),
+        { shouldPlay: false },
       );
       this.pauseSound = pauseSound;
 
       // Cargar sonido de reanudación
       const { sound: resumeSound } = await Audio.Sound.createAsync(
-        require('../../assets/sounds/resume_alert.wav'),
-        { shouldPlay: false }
+        require("../../assets/sounds/resume_alert.wav"),
+        { shouldPlay: false },
       );
       this.resumeSound = resumeSound;
 
       this.isInitialized = true;
     } catch (error) {
-      console.error('Error inicializando sonidos:', error);
+      console.error("Error inicializando sonidos:", error);
     }
   }
 
@@ -100,7 +103,7 @@ class NotificationService {
         await this.exerciseSound.replayAsync();
       }
     } catch (error) {
-      console.error('Error reproduciendo sonido de ejercicio:', error);
+      console.error("Error reproduciendo sonido de ejercicio:", error);
     }
   }
 
@@ -110,7 +113,7 @@ class NotificationService {
         await this.routineSound.replayAsync();
       }
     } catch (error) {
-      console.error('Error reproduciendo sonido de rutina:', error);
+      console.error("Error reproduciendo sonido de rutina:", error);
     }
   }
 
@@ -120,7 +123,7 @@ class NotificationService {
         await this.pauseSound.replayAsync();
       }
     } catch (error) {
-      console.error('Error reproduciendo sonido de pausa:', error);
+      console.error("Error reproduciendo sonido de pausa:", error);
     }
   }
 
@@ -130,27 +133,22 @@ class NotificationService {
         await this.resumeSound.replayAsync();
       }
     } catch (error) {
-      console.error('Error reproduciendo sonido de reanudación:', error);
+      console.error("Error reproduciendo sonido de reanudación:", error);
     }
   }
 
   async vibrate() {
     try {
       // Vibración premium con patrón de éxito
-      await Haptics.notificationAsync(
-        Haptics.NotificationFeedbackType.Success
-      );
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      console.error('Error vibrando:', error);
+      console.error("Error vibrando:", error);
     }
   }
 
   async playNotification() {
     // Reproducir sonido de ejercicio completado + vibración
-    await Promise.all([
-      this.playExerciseCompletionSound(),
-      this.vibrate(),
-    ]);
+    await Promise.all([this.playExerciseCompletionSound(), this.vibrate()]);
   }
 
   async playRoutineCompletion() {
@@ -173,11 +171,20 @@ class NotificationService {
     exerciseTime?: string;
   }) {
     try {
-      const { routineName, currentExercise, elapsedTime, progress, isPaused, exerciseTime } = data;
+      const {
+        routineName,
+        currentExercise,
+        elapsedTime,
+        progress,
+        isPaused,
+        exerciseTime,
+      } = data;
 
-      const title = isPaused ? '⏸️ Entrenamiento en pausa' : '🏃 Entrenamiento en progreso';
+      const title = isPaused
+        ? "⏸️ Entrenamiento en pausa"
+        : "🏃 Entrenamiento en progreso";
       const progressPercent = Math.round(progress * 100);
-      
+
       let body = `${routineName}\n`;
       body += `⏱️ Tiempo: ${elapsedTime}\n`;
       body += `💪 ${currentExercise}`;
@@ -186,37 +193,43 @@ class NotificationService {
       }
       body += `\n📊 Progreso: ${progressPercent}%`;
 
-      const notificationContent: Notifications.NotificationContentInput = {
+      const notificationContent: any = {
         title,
         body,
         sound: false, // Sin sonido en la actualización
         priority: Notifications.AndroidNotificationPriority.MAX,
         sticky: true,
         data: {
-          type: 'workout-progress',
+          type: "workout-progress",
           routineName,
         },
       };
 
-      if (Platform.OS === 'android') {
-        notificationContent.channelId = 'workout';
+      if (Platform.OS === "android") {
+        notificationContent.channelId = "workout";
         notificationContent.autoDismiss = false;
       }
 
+      // Si ya existe una notificación, cancelarla primero
       if (this.workoutNotificationId) {
-        // Actualizar notificación existente
-        await Notifications.dismissNotificationAsync(this.workoutNotificationId);
+        await Notifications.cancelScheduledNotificationAsync(
+          this.workoutNotificationId,
+        );
       }
 
-      // Crear nueva notificación
+      // Crear/actualizar la notificación usando el mismo ID
       const identifier = await Notifications.scheduleNotificationAsync({
+        identifier: this.workoutNotificationId || undefined,
         content: notificationContent,
         trigger: null, // Mostrar inmediatamente
       });
 
-      this.workoutNotificationId = identifier;
+      // Solo guardar el ID si es la primera vez
+      if (!this.workoutNotificationId) {
+        this.workoutNotificationId = identifier;
+      }
     } catch (error) {
-      console.error('Error actualizando notificación de entrenamiento:', error);
+      console.error("Error actualizando notificación de entrenamiento:", error);
     }
   }
 
@@ -226,11 +239,13 @@ class NotificationService {
   async clearWorkoutNotification() {
     try {
       if (this.workoutNotificationId) {
-        await Notifications.dismissNotificationAsync(this.workoutNotificationId);
+        await Notifications.dismissNotificationAsync(
+          this.workoutNotificationId,
+        );
         this.workoutNotificationId = null;
       }
     } catch (error) {
-      console.error('Error limpiando notificación de entrenamiento:', error);
+      console.error("Error limpiando notificación de entrenamiento:", error);
     }
   }
 
@@ -239,15 +254,12 @@ class NotificationService {
    */
   async notifyExerciseComplete(exerciseName: string) {
     try {
-      await Promise.all([
-        this.playExerciseCompletionSound(),
-        this.vibrate(),
-      ]);
+      await Promise.all([this.playExerciseCompletionSound(), this.vibrate()]);
 
       // Notificación temporal (se descarta automáticamente)
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '✅ Ejercicio completado',
+          title: "✅ Ejercicio completado",
           body: exerciseName,
           sound: false, // Ya reproducimos el sonido manualmente
           priority: Notifications.AndroidNotificationPriority.DEFAULT,
@@ -255,7 +267,7 @@ class NotificationService {
         trigger: null,
       });
     } catch (error) {
-      console.error('Error en notificación de ejercicio completado:', error);
+      console.error("Error en notificación de ejercicio completado:", error);
     }
   }
 
@@ -273,7 +285,7 @@ class NotificationService {
 
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '🎉 ¡Rutina completada!',
+          title: "🎉 ¡Rutina completada!",
           body: `${routineName}\n⏱️ Tiempo total: ${totalTime}`,
           sound: false,
           priority: Notifications.AndroidNotificationPriority.HIGH,
@@ -281,7 +293,7 @@ class NotificationService {
         trigger: null,
       });
     } catch (error) {
-      console.error('Error en notificación de rutina completada:', error);
+      console.error("Error en notificación de rutina completada:", error);
     }
   }
 
@@ -308,7 +320,7 @@ class NotificationService {
       }
       this.isInitialized = false;
     } catch (error) {
-      console.error('Error limpiando sonidos:', error);
+      console.error("Error limpiando sonidos:", error);
     }
   }
 }
