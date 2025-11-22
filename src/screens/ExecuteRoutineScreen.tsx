@@ -74,6 +74,14 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const previousActivityIdRef = useRef<string | null>(null);
   const backgroundTimeRef = useRef<number | null>(null);
   const timeRemainingRef = useRef<number>(0);
+  const isInBackgroundRef = useRef<boolean>(false);
+  const notificationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Refs para capturar valores actuales en el intervalo
+  const elapsedTimeRef = useRef<number>(0);
+  const progressRef = useRef<number>(0);
+  const isPausedRef = useRef<boolean>(false);
+  const currentActivityRef = useRef<Activity | undefined>(undefined);
 
   const currentBlock = routine.blocks[currentBlockIndex];
 
@@ -195,59 +203,53 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     };
   }, [isComplete, startTime]);
 
-  // Sincronizar timeRemaining con ref para acceso en AppState
+  // Sincronizar valores con refs para acceso en el intervalo
   useEffect(() => {
     timeRemainingRef.current = timeRemaining;
   }, [timeRemaining]);
-
-  // Actualizar notificación persistente solo cada 5 segundos o cuando cambien factores importantes
+  
   useEffect(() => {
-    if (isComplete || !currentActivity) {
+    elapsedTimeRef.current = elapsedTime;
+  }, [elapsedTime]);
+  
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+  
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+  
+  useEffect(() => {
+    currentActivityRef.current = currentActivity;
+  }, [currentActivity]);
+
+  // Función para actualizar la notificación usando refs (valores actuales)
+  const updateNotification = useCallback(() => {
+    const activity = currentActivityRef.current;
+    if (!activity || isComplete) {
       return;
     }
 
-    // Solo actualizar cada 5 segundos para tiempo transcurrido
-    // Pero siempre actualizar cuando cambien ejercicio, pausa, o timeRemaining (para ejercicios basados en tiempo)
-    const shouldUpdate = 
-      elapsedTime % 5 === 0 || // Cada 5 segundos
-      isPaused || // Cuando se pausa/reanuda
-      currentActivity.exerciseType === 'time'; // Siempre actualizar para ejercicios de tiempo
-
-    if (!shouldUpdate) {
-      return;
+    const exerciseName = activity.name;
+    const elapsedTimeFormatted = formatElapsedTime(elapsedTimeRef.current);
+    
+    let exerciseTime = '';
+    if (activity.exerciseType === 'time' && activity.duration) {
+      exerciseTime = formatTime(timeRemainingRef.current > 0 ? timeRemainingRef.current : 0);
+    } else if (activity.exerciseType === 'reps' && activity.reps) {
+      exerciseTime = `${activity.reps} reps`;
     }
 
-    const updateNotification = () => {
-      const exerciseName = currentActivity.name;
-      const elapsedTimeFormatted = formatElapsedTime(elapsedTime);
-      
-      let exerciseTime = '';
-      if (currentActivity.exerciseType === 'time' && currentActivity.duration) {
-        exerciseTime = formatTime(timeRemaining > 0 ? timeRemaining : 0);
-      } else if (currentActivity.exerciseType === 'reps' && currentActivity.reps) {
-        exerciseTime = `${currentActivity.reps} reps`;
-      }
-
-      notificationService.updateWorkoutNotification({
-        routineName: routine.name,
-        currentExercise: exerciseName,
-        elapsedTime: elapsedTimeFormatted,
-        progress: progress,
-        isPaused: isPaused,
-        exerciseTime: exerciseTime,
-      });
-    };
-
-    updateNotification();
-  }, [
-    currentActivity,
-    elapsedTime,
-    timeRemaining,
-    isPaused,
-    progress,
-    isComplete,
-    routine.name,
-  ]);
+    notificationService.updateWorkoutNotification({
+      routineName: routine.name,
+      currentExercise: exerciseName,
+      elapsedTime: elapsedTimeFormatted,
+      progress: progressRef.current,
+      isPaused: isPausedRef.current,
+      exerciseTime: exerciseTime,
+    });
+  }, [isComplete, routine.name]); // Solo dependencias que no cambian frecuentemente
 
   // Manejar cuando la app va a segundo plano y vuelve
   useEffect(() => {
@@ -261,8 +263,34 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             timeRemainingRef.current,
           );
           backgroundTimeRef.current = Date.now();
+          isInBackgroundRef.current = true;
+          
+          // Mostrar notificación inmediatamente
+          updateNotification();
+          
+          // Actualizar notificación cada 3 segundos mientras esté en segundo plano
+          if (notificationUpdateIntervalRef.current) {
+            clearInterval(notificationUpdateIntervalRef.current);
+          }
+          notificationUpdateIntervalRef.current = setInterval(() => {
+            if (isInBackgroundRef.current && !isComplete) {
+              updateNotification();
+            }
+          }, 3000); // Cada 3 segundos
+          
         } else if (nextAppState === "active" && backgroundTimeRef.current) {
           // App vuelve a primer plano
+          isInBackgroundRef.current = false;
+          
+          // Limpiar el intervalo de actualización
+          if (notificationUpdateIntervalRef.current) {
+            clearInterval(notificationUpdateIntervalRef.current);
+            notificationUpdateIntervalRef.current = null;
+          }
+          
+          // Ocultar la notificación
+          notificationService.clearWorkoutNotification();
+          
           const timeInBackground = Math.floor(
             (Date.now() - backgroundTimeRef.current) / 1000,
           );
@@ -307,8 +335,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
     return () => {
       subscription.remove();
+      // Limpiar intervalo al desmontar
+      if (notificationUpdateIntervalRef.current) {
+        clearInterval(notificationUpdateIntervalRef.current);
+      }
     };
-  }, [currentActivity, isPaused, isComplete, goToNextActivity]);
+  }, [currentActivity, isPaused, isComplete, goToNextActivity, updateNotification]);
 
   // Función para guardar el entrenamiento completado
   const saveCompletedWorkout = useCallback(async () => {

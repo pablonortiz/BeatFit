@@ -186,10 +186,10 @@ class NotificationService {
       const progressPercent = Math.round(progress * 100);
 
       let body = `${routineName}\n`;
-      body += `⏱️ Tiempo: ${elapsedTime}\n`;
+      body += `⏱️ Tiempo total: ${elapsedTime}\n`;
       body += `💪 ${currentExercise}`;
       if (exerciseTime) {
-        body += ` - ${exerciseTime}`;
+        body += ` • ${exerciseTime}`;
       }
       body += `\n📊 Progreso: ${progressPercent}%`;
 
@@ -202,32 +202,43 @@ class NotificationService {
         data: {
           type: "workout-progress",
           routineName,
+          timestamp: Date.now(), // Añadir timestamp para forzar actualización
         },
       };
 
       if (Platform.OS === "android") {
         notificationContent.channelId = "workout";
-        notificationContent.autoDismiss = false;
+        notificationContent.tag = "beatfit-workout"; // Tag fijo para identificar la notificación
       }
 
-      // Si ya existe una notificación, cancelarla primero
-      if (this.workoutNotificationId) {
-        await Notifications.cancelScheduledNotificationAsync(
-          this.workoutNotificationId,
-        );
+      // Si ya existe una notificación con el mismo ID, Android la actualizará automáticamente
+      // gracias al tag. No necesitamos eliminarla primero.
+
+      // Usar un identifier fijo para asegurar que se actualice la misma notificación
+      const fixedIdentifier = "beatfit-workout-notification";
+
+      if (
+        this.workoutNotificationId &&
+        this.workoutNotificationId !== fixedIdentifier
+      ) {
+        // Si hay una notificación antigua con diferente ID, eliminarla
+        try {
+          await Notifications.dismissNotificationAsync(
+            this.workoutNotificationId,
+          );
+        } catch (e) {
+          // Ignorar errores si la notificación ya no existe
+        }
       }
 
-      // Crear/actualizar la notificación usando el mismo ID
-      const identifier = await Notifications.scheduleNotificationAsync({
-        identifier: this.workoutNotificationId || undefined,
+      // Programar/actualizar la notificación
+      await Notifications.scheduleNotificationAsync({
+        identifier: fixedIdentifier,
         content: notificationContent,
         trigger: null, // Mostrar inmediatamente
       });
 
-      // Solo guardar el ID si es la primera vez
-      if (!this.workoutNotificationId) {
-        this.workoutNotificationId = identifier;
-      }
+      this.workoutNotificationId = fixedIdentifier;
     } catch (error) {
       console.error("Error actualizando notificación de entrenamiento:", error);
     }
@@ -250,22 +261,17 @@ class NotificationService {
   }
 
   /**
-   * Enviar notificación de ejercicio completado (sonido + vibración + notificación temporal)
+   * Enviar notificación de ejercicio completado (sonido + vibración, SIN notificación visual)
    */
-  async notifyExerciseComplete(exerciseName: string) {
+  async notifyExerciseComplete(
+    exerciseName: string,
+    isInBackground: boolean = false,
+  ) {
     try {
+      // Siempre reproducir sonido y vibración
       await Promise.all([this.playExerciseCompletionSound(), this.vibrate()]);
 
-      // Notificación temporal (se descarta automáticamente)
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "✅ Ejercicio completado",
-          body: exerciseName,
-          sound: false, // Ya reproducimos el sonido manualmente
-          priority: Notifications.AndroidNotificationPriority.DEFAULT,
-        },
-        trigger: null,
-      });
+      // NO mostrar notificación temporal - el usuario solo quiere la notificación persistente en background
     } catch (error) {
       console.error("Error en notificación de ejercicio completado:", error);
     }
