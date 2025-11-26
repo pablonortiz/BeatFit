@@ -21,7 +21,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { Activity, Block, Routine, WorkoutSession, ExecutedActivity } from "../types";
 import { formatTime, generateId, formatTimeLong } from "../utils/helpers";
 import { notificationService } from "../services/notification";
-import { nativeWorkoutService } from "../services/nativeWorkoutService";
 import { useVoiceRecognition } from "../hooks/useVoiceRecognition";
 import { useWorkoutHistory } from "../hooks/useStorage";
 import { getBestTimeForRoutine } from "../utils/stats";
@@ -172,8 +171,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Limpiar notificación cuando se complete la rutina
   useEffect(() => {
     if (isComplete) {
-      // Detener servicio nativo
-      nativeWorkoutService.stopService();
+      // Detener notificaciones de workout
+      notificationService.stopWorkoutNotification();
 
       // Esperar un poco para que se vea la notificación de rutina completada
       const timer = setTimeout(() => {
@@ -211,9 +210,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       setCurrentActivityStartTime(Date.now());
       // NO resetear currentActivityPausedTime aquí - se resetea después de guardar
 
-      // Actualizar servicio nativo si está en segundo plano
+      // Actualizar notificación si está en segundo plano
       if (isInBackgroundRef.current) {
-        nativeWorkoutService.updateWorkoutData({
+        notificationService.updateWorkoutData({
           routineName: routine.name,
           currentExercise: currentActivity.name,
           startTime: startTime,
@@ -327,29 +326,32 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           backgroundTimeRef.current = Date.now();
           isInBackgroundRef.current = true;
 
-          // Iniciar servicio nativo de foreground (actualiza cada segundo con contador)
+          // Iniciar notificaciones de workout con Notifee (actualiza cada segundo con countdown)
           if (currentActivity) {
-            await nativeWorkoutService.startService({
-              routineName: routine.name,
-              currentExercise: currentActivity.name,
-              startTime: startTime,
-              isPaused: isPaused,
-              pausedAt: pauseStartTime || undefined,
-              totalPausedTime: totalPausedTime,
-              exerciseType: currentActivity.exerciseType,
-              exerciseDuration: currentActivity.duration,
-              exerciseStartTime: currentActivityStartTime,
-              exerciseReps: currentActivity.reps,
-              progress: progress,
-            });
+            await notificationService.startWorkoutNotification(
+              {
+                routineName: routine.name,
+                currentExercise: currentActivity.name,
+                startTime: startTime,
+                isPaused: isPaused,
+                pausedAt: pauseStartTime || undefined,
+                totalPausedTime: totalPausedTime,
+                exerciseType: currentActivity.exerciseType,
+                exerciseDuration: currentActivity.duration,
+                exerciseStartTime: currentActivityStartTime,
+                exerciseReps: currentActivity.reps,
+                progress: progress,
+              },
+              goToNextActivity, // Callback que se llama cuando termina el ejercicio
+            );
           }
 
         } else if (nextAppState === "active" && backgroundTimeRef.current) {
           // App vuelve a primer plano
           isInBackgroundRef.current = false;
 
-          // Detener servicio nativo de foreground
-          await nativeWorkoutService.stopService();
+          // Detener notificaciones de workout
+          await notificationService.stopWorkoutNotification();
 
           const timeInBackground = Math.floor(
             (Date.now() - backgroundTimeRef.current) / 1000,
@@ -395,8 +397,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
     return () => {
       subscription.remove();
-      // Limpiar servicio nativo al desmontar
-      nativeWorkoutService.stopService();
+      // Limpiar notificaciones al desmontar
+      notificationService.stopWorkoutNotification();
     };
   }, [currentActivity, isPaused, isComplete, goToNextActivity, startTime, currentActivityStartTime, pauseStartTime, totalPausedTime, progress, routine.name]);
 
@@ -695,9 +697,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       setPauseStartTime(Date.now());
       notificationService.playPauseSound();
 
-      // Actualizar servicio nativo si está en segundo plano
+      // Actualizar notificación si está en segundo plano
       if (isInBackgroundRef.current && currentActivity) {
-        await nativeWorkoutService.updateWorkoutData({
+        notificationService.updateWorkoutData({
           routineName: routine.name,
           currentExercise: currentActivity.name,
           startTime: startTime,
@@ -721,9 +723,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       }
       notificationService.playResumeSound();
 
-      // Actualizar servicio nativo si está en segundo plano
+      // Actualizar notificación si está en segundo plano
       if (isInBackgroundRef.current && currentActivity) {
-        await nativeWorkoutService.updateWorkoutData({
+        notificationService.updateWorkoutData({
           routineName: routine.name,
           currentExercise: currentActivity.name,
           startTime: startTime,
