@@ -174,12 +174,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     if (isComplete) {
       // Detener servicio nativo
       nativeWorkoutService.stopService();
-      
+
       // Esperar un poco para que se vea la notificación de rutina completada
       const timer = setTimeout(() => {
         notificationService.clearWorkoutNotification();
       }, 2000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [isComplete]);
@@ -210,7 +210,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     if (!isPaused && !isComplete && currentActivity) {
       setCurrentActivityStartTime(Date.now());
       // NO resetear currentActivityPausedTime aquí - se resetea después de guardar
-      
+
       // Actualizar servicio nativo si está en segundo plano
       if (isInBackgroundRef.current) {
         nativeWorkoutService.updateWorkoutData({
@@ -326,8 +326,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           );
           backgroundTimeRef.current = Date.now();
           isInBackgroundRef.current = true;
-          
-          // Iniciar servicio nativo de foreground (actualiza cada segundo)
+
+          // Iniciar servicio nativo de foreground (actualiza cada segundo con contador)
           if (currentActivity) {
             await nativeWorkoutService.startService({
               routineName: routine.name,
@@ -343,14 +343,14 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               progress: progress,
             });
           }
-          
+
         } else if (nextAppState === "active" && backgroundTimeRef.current) {
           // App vuelve a primer plano
           isInBackgroundRef.current = false;
-          
+
           // Detener servicio nativo de foreground
           await nativeWorkoutService.stopService();
-          
+
           const timeInBackground = Math.floor(
             (Date.now() - backgroundTimeRef.current) / 1000,
           );
@@ -694,7 +694,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       // Pausando: guardar el timestamp actual y reproducir sonido
       setPauseStartTime(Date.now());
       notificationService.playPauseSound();
-      
+
       // Actualizar servicio nativo si está en segundo plano
       if (isInBackgroundRef.current && currentActivity) {
         await nativeWorkoutService.updateWorkoutData({
@@ -720,7 +720,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         setPauseStartTime(null);
       }
       notificationService.playResumeSound();
-      
+
       // Actualizar servicio nativo si está en segundo plano
       if (isInBackgroundRef.current && currentActivity) {
         await nativeWorkoutService.updateWorkoutData({
