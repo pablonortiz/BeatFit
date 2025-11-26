@@ -67,3 +67,6 @@ packages.add(new WorkoutNotificationPackage());
 - La notificación se actualiza cada segundo usando un Handler nativo de Android
 - No depende de JavaScript para las actualizaciones, solo para iniciar/detener
 
+
+
+

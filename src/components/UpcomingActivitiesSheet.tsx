@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,47 +13,51 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
-  runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { theme } from '../theme';
-import { Activity, Block } from '../types';
+import { Activity } from '../types';
 import { formatTime } from '../utils/helpers';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const COLLAPSED_HEIGHT = 60;
 const EXPANDED_HEIGHT = SCREEN_HEIGHT * 0.7;
 
+// Interfaz extendida para actividades con metadata
+interface SequencedActivity extends Activity {
+  sequenceIndex: number;
+  blockIndex: number;
+  blockName: string;
+  blockRepetition: number;
+  isRestBetweenReps: boolean;
+}
+
 interface UpcomingActivitiesSheetProps {
-  blocks: Block[];
-  currentBlockIndex: number;
-  currentBlockRep: number;
-  currentActivityIndex: number;
+  activitySequence: SequencedActivity[];
+  currentSequenceIndex: number;
   isProcessingPending?: boolean;
-  pendingActivities?: Activity[];
+  pendingActivities?: SequencedActivity[];
   currentPendingIndex?: number;
 }
 
 export function UpcomingActivitiesSheet({
-  blocks,
-  currentBlockIndex,
-  currentBlockRep,
-  currentActivityIndex,
+  activitySequence,
+  currentSequenceIndex,
   isProcessingPending = false,
   pendingActivities = [],
   currentPendingIndex = 0,
 }: UpcomingActivitiesSheetProps) {
   const insets = useSafeAreaInsets();
-  
+  const scrollViewRef = useRef<ScrollView>(null);
+
   // Iniciar en estado colapsado (abajo)
   const translateY = useSharedValue(EXPANDED_HEIGHT - COLLAPSED_HEIGHT);
   const context = useSharedValue({ y: 0 });
 
-  // Calcular todas las actividades restantes
+  // Calcular todas las actividades desde la actual en adelante
   const upcomingActivities = useMemo(() => {
     const activities: Array<{
-      activity: Activity;
+      activity: SequencedActivity;
       blockName: string;
       blockRepetition: number;
       isCurrent: boolean;
@@ -73,47 +77,37 @@ export function UpcomingActivitiesSheet({
           });
         }
       });
-    }
-
-    // Agregar actividades del bloque actual y siguientes
-    blocks.forEach((block, blockIdx) => {
-      const startRep = blockIdx === currentBlockIndex ? currentBlockRep : 0;
-      const endRep = block.repetitions;
-
-      for (let rep = startRep; rep < endRep; rep++) {
-        block.activities.forEach((activity, actIdx) => {
-          // Si es el bloque actual, solo mostrar desde la actividad actual en adelante
-          if (blockIdx === currentBlockIndex && rep === currentBlockRep) {
-            if (actIdx < currentActivityIndex) return;
-          }
-
-          const isCurrent =
-            !isProcessingPending &&
-            blockIdx === currentBlockIndex &&
-            rep === currentBlockRep &&
-            actIdx === currentActivityIndex;
-
-          activities.push({
-            activity,
-            blockName: block.name || `Bloque ${blockIdx + 1}`,
-            blockRepetition: block.repetitions > 1 ? rep + 1 : 0,
-            isCurrent,
-            isPending: false,
-          });
+    } else {
+      // Agregar actividades desde la actual en adelante
+      for (let i = currentSequenceIndex; i < activitySequence.length; i++) {
+        const activity = activitySequence[i];
+        activities.push({
+          activity,
+          blockName: activity.blockName,
+          blockRepetition: activity.blockRepetition,
+          isCurrent: i === currentSequenceIndex,
+          isPending: false,
         });
       }
-    });
+    }
 
     return activities;
   }, [
-    blocks,
-    currentBlockIndex,
-    currentBlockRep,
-    currentActivityIndex,
+    activitySequence,
+    currentSequenceIndex,
     isProcessingPending,
     pendingActivities,
     currentPendingIndex,
   ]);
+
+  // Auto-scroll al ejercicio actual cuando se expande el sheet
+  useEffect(() => {
+    // Pequeño delay para asegurar que el sheet se expandió
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentSequenceIndex, isProcessingPending]);
 
   const gesture = Gesture.Pan()
     .onStart(() => {
@@ -134,14 +128,14 @@ export function UpcomingActivitiesSheet({
       if (shouldExpand) {
         // Expandir (mover hacia arriba)
         translateY.value = withSpring(0, {
-          damping: 20,
-          stiffness: 90,
+          damping: 30,
+          stiffness: 180,
         });
       } else {
         // Colapsar (mover hacia abajo)
         translateY.value = withSpring(EXPANDED_HEIGHT - COLLAPSED_HEIGHT, {
-          damping: 20,
-          stiffness: 90,
+          damping: 30,
+          stiffness: 180,
         });
       }
     });
@@ -149,6 +143,15 @@ export function UpcomingActivitiesSheet({
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateY: translateY.value }],
+    };
+  });
+
+  // Estilo para ocultar contenido cuando está colapsado
+  const contentOpacityStyle = useAnimatedStyle(() => {
+    const maxCollapsed = EXPANDED_HEIGHT - COLLAPSED_HEIGHT;
+    const isCollapsed = translateY.value > maxCollapsed / 2;
+    return {
+      opacity: isCollapsed ? 0 : 1,
     };
   });
 
@@ -163,19 +166,19 @@ export function UpcomingActivitiesSheet({
   const toggleSheet = () => {
     const maxCollapsed = EXPANDED_HEIGHT - COLLAPSED_HEIGHT;
     const isCollapsed = translateY.value > maxCollapsed / 2;
-    
+
     translateY.value = withSpring(
       isCollapsed ? 0 : maxCollapsed,
       {
-        damping: 20,
-        stiffness: 90,
+        damping: 30,
+        stiffness: 180,
       }
     );
   };
 
   const renderActivity = (
     item: {
-      activity: Activity;
+      activity: SequencedActivity;
       blockName: string;
       blockRepetition: number;
       isCurrent: boolean;
@@ -184,6 +187,7 @@ export function UpcomingActivitiesSheet({
     index: number
   ) => {
     const isRest = item.activity.type === 'rest';
+    const isRestBetweenReps = item.activity.isRestBetweenReps;
     const iconColor = isRest ? theme.colors.rest : theme.colors.exercise;
 
     return (
@@ -225,8 +229,8 @@ export function UpcomingActivitiesSheet({
             </Text>
             <View style={styles.activityMeta}>
               <Text style={styles.activityMetaText}>
-                {item.blockName}
-                {item.blockRepetition > 0 && ` (${item.blockRepetition})`}
+                {isRestBetweenReps ? 'Descanso entre reps' : item.blockName}
+                {item.blockRepetition > 0 && !isRestBetweenReps && ` (Rep ${item.blockRepetition})`}
               </Text>
               {item.isPending && (
                 <View style={styles.pendingTag}>
@@ -254,9 +258,9 @@ export function UpcomingActivitiesSheet({
   };
 
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.container, { bottom: insets.bottom }, animatedStyle]}>
-        {/* Handle */}
+    <Animated.View style={[styles.container, { bottom: insets.bottom }, animatedStyle]}>
+      {/* Handle - Con gesto para arrastrar */}
+      <GestureDetector gesture={gesture}>
         <TouchableOpacity
           style={styles.handleContainer}
           onPress={toggleSheet}
@@ -283,17 +287,21 @@ export function UpcomingActivitiesSheet({
             </Animated.View>
           </View>
         </TouchableOpacity>
+      </GestureDetector>
 
-        {/* Content */}
+      {/* Content - Sin gesto, permite scroll libremente */}
+      <Animated.View style={[{ flex: 1 }, contentOpacityStyle]}>
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom }]}
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
         >
           {upcomingActivities.map((item, index) => renderActivity(item, index))}
         </ScrollView>
       </Animated.View>
-    </GestureDetector>
+    </Animated.View>
   );
 }
 
@@ -311,6 +319,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 20,
+    overflow: 'hidden', // Ocultar contenido fuera del contenedor
   },
   handleContainer: {
     paddingTop: theme.spacing.sm,

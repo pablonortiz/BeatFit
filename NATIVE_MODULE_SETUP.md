@@ -70,3 +70,6 @@ Cuando ejecutes la app, busca estos logs en la consola:
 - `[NativeWorkoutService] ✅ Module found!` - El módulo está disponible
 - `[NativeWorkoutService] ❌ WorkoutNotificationService native module NOT AVAILABLE!` - El módulo NO está disponible
 
+
+
+

@@ -53,14 +53,17 @@ class NotificationService {
         });
       }
 
-      // Configurar el modo de audio para funcionar en background
+      // Configurar el modo de audio para mezclar con música del usuario
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        staysActiveInBackground: true, // IMPORTANTE: Activar background
-        shouldDuckAndroid: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true, // Permite mezclar audio (baja ligeramente el volumen de música)
         playThroughEarpieceAndroid: false,
-        interruptionModeIOS: 1, // No interrumpir música de otras apps
-        interruptionModeAndroid: 1,
+        // Mezclar con otros audios sin pausarlos
+        // iOS: 0 = MIX_WITH_OTHERS (mezcla sin pausar)
+        // Android: 2 = DUCK_OTHERS (mezcla bajando volumen temporalmente)
+        interruptionModeIOS: 0,
+        interruptionModeAndroid: 2,
       });
 
       // Cargar sonido de ejercicio completado
@@ -101,6 +104,10 @@ class NotificationService {
     try {
       if (this.exerciseSound) {
         await this.exerciseSound.replayAsync();
+        // Detener el sonido después de reproducirlo para liberar audio focus
+        setTimeout(async () => {
+          await this.exerciseSound?.stopAsync();
+        }, 1500);
       }
     } catch (error) {
       console.error("Error reproduciendo sonido de ejercicio:", error);
@@ -111,6 +118,10 @@ class NotificationService {
     try {
       if (this.routineSound) {
         await this.routineSound.replayAsync();
+        // Detener el sonido después de reproducirlo para liberar audio focus
+        setTimeout(async () => {
+          await this.routineSound?.stopAsync();
+        }, 2000);
       }
     } catch (error) {
       console.error("Error reproduciendo sonido de rutina:", error);
@@ -121,6 +132,10 @@ class NotificationService {
     try {
       if (this.pauseSound) {
         await this.pauseSound.replayAsync();
+        // Detener el sonido después de reproducirlo para liberar audio focus
+        setTimeout(async () => {
+          await this.pauseSound?.stopAsync();
+        }, 1000);
       }
     } catch (error) {
       console.error("Error reproduciendo sonido de pausa:", error);
@@ -131,6 +146,10 @@ class NotificationService {
     try {
       if (this.resumeSound) {
         await this.resumeSound.replayAsync();
+        // Detener el sonido después de reproducirlo para liberar audio focus
+        setTimeout(async () => {
+          await this.resumeSound?.stopAsync();
+        }, 1000);
       }
     } catch (error) {
       console.error("Error reproduciendo sonido de reanudación:", error);

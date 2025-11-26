@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { RootStackParamList } from "../navigation/types";
 import { theme } from "../theme";
 import { Button, CustomAlert, UpcomingActivitiesSheet } from "../components";
 import { Ionicons } from "@expo/vector-icons";
-import { Activity, Block, WorkoutSession, ExecutedActivity } from "../types";
+import { Activity, Block, Routine, WorkoutSession, ExecutedActivity } from "../types";
 import { formatTime, generateId, formatTimeLong } from "../utils/helpers";
 import { notificationService } from "../services/notification";
 import { nativeWorkoutService } from "../services/nativeWorkoutService";
@@ -30,6 +30,57 @@ import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ExecuteRoutine">;
+
+// Tipo extendido de actividad que incluye metadata de ejecución
+interface SequencedActivity extends Activity {
+  sequenceIndex: number; // Índice en la secuencia completa
+  blockIndex: number; // Índice del bloque original
+  blockName: string; // Nombre del bloque
+  blockRepetition: number; // Qué repetición del bloque es
+  isRestBetweenReps: boolean; // Si es un descanso entre repeticiones
+}
+
+// Función para generar la secuencia completa de actividades
+function generateActivitySequence(routine: Routine): SequencedActivity[] {
+  const sequence: SequencedActivity[] = [];
+  let sequenceIndex = 0;
+
+  routine.blocks.forEach((block, blockIndex) => {
+    for (let rep = 0; rep < block.repetitions; rep++) {
+      // Agregar todas las actividades del bloque
+      block.activities.forEach((activity) => {
+        sequence.push({
+          ...activity,
+          sequenceIndex: sequenceIndex++,
+          blockIndex,
+          blockName: block.name || `Bloque ${blockIndex + 1}`,
+          blockRepetition: rep + 1,
+          isRestBetweenReps: false,
+        });
+      });
+
+      // Agregar descanso entre repeticiones si no es la última repetición
+      if (rep < block.repetitions - 1 && block.restBetweenReps && block.restBetweenReps > 0) {
+        const restActivity: SequencedActivity = {
+          id: `rest-between-reps-${block.id}-${rep}`,
+          type: 'rest',
+          name: 'Descanso entre repeticiones',
+          icon: 'pause-circle',
+          exerciseType: 'time',
+          duration: block.restBetweenReps,
+          sequenceIndex: sequenceIndex++,
+          blockIndex,
+          blockName: block.name || `Bloque ${blockIndex + 1}`,
+          blockRepetition: rep + 1,
+          isRestBetweenReps: true,
+        };
+        sequence.push(restActivity);
+      }
+    }
+  });
+
+  return sequence;
+}
 
 export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const { routine } = route.params;
@@ -43,16 +94,18 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     hideAlert,
   } = useCustomAlert();
 
-  const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
-  const [currentBlockRep, setCurrentBlockRep] = useState(0);
-  const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
+  // Generar secuencia de actividades al inicio
+  const activitySequence = useMemo(() => generateActivitySequence(routine), [routine]);
+
+  // Estado simplificado
+  const [currentSequenceIndex, setCurrentSequenceIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [startTime] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showSkipModal, setShowSkipModal] = useState(false);
-  const [pendingActivities, setPendingActivities] = useState<Activity[]>([]);
+  const [pendingActivities, setPendingActivities] = useState<SequencedActivity[]>([]);
   const [isProcessingPending, setIsProcessingPending] = useState(false);
   const [currentPendingIndex, setCurrentPendingIndex] = useState(0);
   const [executionTimeline, setExecutionTimeline] = useState<
@@ -77,46 +130,34 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const timeRemainingRef = useRef<number>(0);
   const isInBackgroundRef = useRef<boolean>(false);
   const notificationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Refs para capturar valores actuales en el intervalo
   const elapsedTimeRef = useRef<number>(0);
   const progressRef = useRef<number>(0);
   const isPausedRef = useRef<boolean>(false);
-  const currentActivityRef = useRef<Activity | undefined>(undefined);
+  const currentActivityRef = useRef<SequencedActivity | undefined>(undefined);
 
-  const currentBlock = routine.blocks[currentBlockIndex];
-
-  // Determinar actividad actual (puede ser de pendientes o del bloque)
-  const currentActivity = isProcessingPending
+  // Determinar actividad actual
+  const currentActivity: SequencedActivity | undefined = isProcessingPending
     ? pendingActivities[currentPendingIndex]
-    : currentBlock?.activities[currentActivityIndex];
+    : activitySequence[currentSequenceIndex];
 
-  const isLastActivityInBlock =
-    currentActivityIndex === currentBlock?.activities.length - 1;
-  const isLastRepOfBlock = currentBlockRep === currentBlock?.repetitions - 1;
-  const isLastBlock = currentBlockIndex === routine.blocks.length - 1;
+  // Obtener bloque actual para UI
+  const currentBlock = currentActivity
+    ? routine.blocks[currentActivity.blockIndex]
+    : routine.blocks[0];
+
   const isLastPendingActivity =
     currentPendingIndex === pendingActivities.length - 1;
 
   // Calcular progreso total
   const calculateProgress = useCallback(() => {
-    let completedActivities = 0;
-    let totalActivities = 0;
-
-    routine.blocks.forEach((block, blockIdx) => {
-      const activitiesInBlock = block.activities.length * block.repetitions;
-      totalActivities += activitiesInBlock;
-
-      if (blockIdx < currentBlockIndex) {
-        completedActivities += activitiesInBlock;
-      } else if (blockIdx === currentBlockIndex) {
-        completedActivities +=
-          currentBlockRep * block.activities.length + currentActivityIndex;
-      }
-    });
-
-    return totalActivities > 0 ? completedActivities / totalActivities : 0;
-  }, [routine, currentBlockIndex, currentBlockRep, currentActivityIndex]);
+    if (isProcessingPending) {
+      // Durante pendientes, el progreso sigue siendo el de la secuencia principal
+      return currentSequenceIndex / activitySequence.length;
+    }
+    return currentSequenceIndex / activitySequence.length;
+  }, [currentSequenceIndex, activitySequence.length, isProcessingPending]);
 
   const progress = calculateProgress();
 
@@ -391,192 +432,85 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     return workoutId;
   }, [routine, startTime, saveWorkout, executionTimeline]);
 
-  // Función para avanzar a la siguiente actividad
+  // Función para avanzar a la siguiente actividad (SIMPLIFICADA)
   const goToNextActivity = useCallback(async () => {
     // Notificar ejercicio completado (sonido + vibración + notificación)
     await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
-    // Si estamos procesando pendientes
+    if (!currentActivity) return;
+
+    // Registrar actividad actual como completada
+    const completedActivity: ExecutedActivity = {
+      activity: currentActivity,
+      blockIndex: currentActivity.blockIndex,
+      blockName: currentActivity.blockName,
+      blockRepetition: currentActivity.blockRepetition,
+      status: "completed",
+      startedAt: currentActivityStartTime,
+      completedAt: Date.now(),
+      wasPostponed: isProcessingPending, // True si vino de pendientes
+      pausedTime:
+        currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
+    };
+
+    setExecutionTimeline((prev) => [...prev, completedActivity]);
+
+    // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
+    setCurrentActivityStartTime(Date.now());
+    setCurrentActivityPausedTime(0);
+
+    // LÓGICA SIMPLIFICADA DE AVANCE
     if (isProcessingPending) {
-      // Registrar actividad actual como completada
-      if (currentActivity) {
-        const completedActivity: ExecutedActivity = {
-          activity: currentActivity,
-          blockIndex: -1, // -1 para pendientes
-          blockName: t("executeRoutine.pending"),
-          blockRepetition: 0,
-          status: "completed",
-          startedAt: currentActivityStartTime,
-          completedAt: Date.now(),
-          wasPostponed: true,
-          pausedTime:
-            currentActivityPausedTime > 0
-              ? currentActivityPausedTime
-              : undefined,
-        };
-        setExecutionTimeline((prev) => {
-          const updatedTimeline = [...prev, completedActivity];
-
-          // Si es el último pendiente y estábamos en el último bloque/rep, completar la rutina
-          if (isLastPendingActivity && isLastRepOfBlock && isLastBlock) {
-            // Guardar con el timeline actualizado
-            setTimeout(async () => {
-              setIsComplete(true);
-              await notificationService.playRoutineCompletion();
-              // saveCompletedWorkout se llamará después con el timeline actualizado
-            }, 0);
-          }
-
-          return updatedTimeline;
-        });
-      }
-
-      // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
-      setCurrentActivityStartTime(Date.now());
-      setCurrentActivityPausedTime(0);
-
+      // Estamos procesando pendientes
       if (isLastPendingActivity) {
         // Terminamos de procesar todos los pendientes
         setPendingActivities([]);
         setIsProcessingPending(false);
         setCurrentPendingIndex(0);
 
-        // Verificar si estábamos en el último bloque y última rep
-        // En ese caso, la rutina está completa
-        if (isLastRepOfBlock && isLastBlock) {
-          // La rutina se completará mediante el efecto del setExecutionTimeline
-          return;
-        }
-
-        // Ahora sí avanzar al siguiente bloque o repetición
-        if (isLastRepOfBlock) {
-          // Siguiente bloque
-          setCurrentBlockIndex(currentBlockIndex + 1);
-          setCurrentBlockRep(0);
-          setCurrentActivityIndex(0);
-        } else {
-          // Siguiente repetición del bloque
-          setCurrentBlockRep(currentBlockRep + 1);
-          setCurrentActivityIndex(0);
-        }
-      } else {
-        // Siguiente actividad pendiente
-        setCurrentPendingIndex(currentPendingIndex + 1);
-      }
-      return;
-    }
-
-    // Lógica normal (no pendientes)
-    // Registrar actividad actual como completada
-    if (currentActivity) {
-      const completedActivity: ExecutedActivity = {
-        activity: currentActivity,
-        blockIndex: currentBlockIndex,
-        blockName: currentBlock?.name || `Bloque ${currentBlockIndex + 1}`,
-        blockRepetition: currentBlockRep + 1,
-        status: "completed",
-        startedAt: currentActivityStartTime,
-        completedAt: Date.now(),
-        wasPostponed: false,
-        pausedTime:
-          currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
-      };
-      setExecutionTimeline((prev) => {
-        const updatedTimeline = [...prev, completedActivity];
-
-        // Si es la última actividad de la rutina, completar
-        if (
-          isLastActivityInBlock &&
-          isLastRepOfBlock &&
-          isLastBlock &&
-          pendingActivities.length === 0
-        ) {
+        // Si ya habíamos terminado la secuencia principal, completar rutina
+        if (currentSequenceIndex >= activitySequence.length) {
           setTimeout(async () => {
             setIsComplete(true);
             await notificationService.playRoutineCompletion();
           }, 0);
         }
-
-        return updatedTimeline;
-      });
-    }
-
-    // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
-    setCurrentActivityStartTime(Date.now());
-    setCurrentActivityPausedTime(0);
-
-    if (isLastActivityInBlock && isLastRepOfBlock && isLastBlock) {
-      // Verificar si hay pendientes antes de completar
-      if (pendingActivities.length > 0) {
-        setIsProcessingPending(true);
-        setCurrentPendingIndex(0);
-        return;
-      }
-
-      // La rutina se completará mediante el efecto del setExecutionTimeline
-      return;
-    }
-
-    if (isLastActivityInBlock) {
-      // Verificar si hay pendientes antes de cambiar de bloque/repetición
-      if (pendingActivities.length > 0) {
-        setIsProcessingPending(true);
-        setCurrentPendingIndex(0);
-        return;
-      }
-
-      if (isLastRepOfBlock) {
-        // Siguiente bloque
-        setCurrentBlockIndex(currentBlockIndex + 1);
-        setCurrentBlockRep(0);
-        setCurrentActivityIndex(0);
       } else {
-        // Siguiente repetición del bloque
-        // Verificar si hay descanso configurado entre repeticiones
-        if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
-          // Crear actividad de descanso temporal y agregarla a pendientes
-          const restActivity: Activity = {
-            id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
-            type: 'rest',
-            name: 'Descanso entre repeticiones',
-            icon: 'pause-circle',
-            exerciseType: 'time',
-            duration: currentBlock.restBetweenReps,
-          };
-          
-          // Agregar el descanso como pendiente para que se ejecute ahora
-          setPendingActivities((prev) => [restActivity, ...prev]);
-          setIsProcessingPending(true);
-          setCurrentPendingIndex(0);
-          
-          // Ya avanzamos la repetición para que después del descanso continúe normalmente
-          setCurrentBlockRep(currentBlockRep + 1);
-          setCurrentActivityIndex(0);
-        } else {
-          setCurrentBlockRep(currentBlockRep + 1);
-          setCurrentActivityIndex(0);
-        }
+        // Siguiente actividad pendiente
+        setCurrentPendingIndex(currentPendingIndex + 1);
       }
     } else {
-      // Siguiente actividad en el bloque
-      setCurrentActivityIndex(currentActivityIndex + 1);
+      // Estamos en la secuencia principal
+      const nextIndex = currentSequenceIndex + 1;
+
+      if (nextIndex >= activitySequence.length) {
+        // Terminamos la secuencia principal
+        if (pendingActivities.length > 0) {
+          // Hay pendientes, procesarlos
+          setIsProcessingPending(true);
+          setCurrentPendingIndex(0);
+        } else {
+          // No hay pendientes, completar rutina
+          setTimeout(async () => {
+            setIsComplete(true);
+            await notificationService.playRoutineCompletion();
+          }, 0);
+        }
+      } else {
+        // Siguiente actividad en la secuencia
+        setCurrentSequenceIndex(nextIndex);
+      }
     }
   }, [
     currentActivity,
-    currentBlock,
-    currentBlockIndex,
-    currentBlockRep,
-    currentActivityIndex,
     currentActivityStartTime,
-    isLastActivityInBlock,
-    isLastRepOfBlock,
-    isLastBlock,
+    currentActivityPausedTime,
     isProcessingPending,
-    currentPendingIndex,
     isLastPendingActivity,
-    pendingActivities,
-    navigation,
-    saveCompletedWorkout,
+    currentSequenceIndex,
+    activitySequence.length,
+    pendingActivities.length,
+    currentPendingIndex,
   ]);
 
   // Reconocimiento de voz para ejercicios por repeticiones
@@ -846,161 +780,61 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     // Notificar ejercicio saltado
     await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
+    if (!currentActivity) return;
+
+    // Registrar actividad como saltada
+    const skippedActivity: ExecutedActivity = {
+      activity: currentActivity,
+      blockIndex: currentActivity.blockIndex,
+      blockName: currentActivity.blockName,
+      blockRepetition: currentActivity.blockRepetition,
+      status: "skipped",
+      startedAt: currentActivityStartTime,
+      completedAt: Date.now(),
+      wasPostponed: isProcessingPending,
+      pausedTime:
+        currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
+    };
+
+    setExecutionTimeline((prev) => [...prev, skippedActivity]);
+
+    // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
+    setCurrentActivityStartTime(Date.now());
+    setCurrentActivityPausedTime(0);
+
+    // MISMA LÓGICA QUE goToNextActivity
     if (isProcessingPending) {
-      // Registrar actividad como saltada
-      if (currentActivity) {
-        const skippedActivity: ExecutedActivity = {
-          activity: currentActivity,
-          blockIndex: -1,
-          blockName: t("executeRoutine.pending"),
-          blockRepetition: 0,
-          status: "skipped",
-          startedAt: currentActivityStartTime,
-          completedAt: Date.now(),
-          wasPostponed: true,
-          pausedTime:
-            currentActivityPausedTime > 0
-              ? currentActivityPausedTime
-              : undefined,
-        };
-        setExecutionTimeline((prev) => {
-          const updatedTimeline = [...prev, skippedActivity];
-
-          // Si es el último pendiente y estábamos en el último bloque/rep, completar la rutina
-          if (isLastPendingActivity && isLastRepOfBlock && isLastBlock) {
-            setTimeout(async () => {
-              setIsComplete(true);
-              const totalTime = formatElapsedTime(elapsedTime);
-              await notificationService.notifyRoutineComplete(routine.name, totalTime);
-            }, 0);
-          }
-
-          return updatedTimeline;
-        });
-      }
-
-      // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
-      setCurrentActivityStartTime(Date.now());
-      setCurrentActivityPausedTime(0);
-
       if (isLastPendingActivity) {
         setPendingActivities([]);
         setIsProcessingPending(false);
         setCurrentPendingIndex(0);
-        if (isLastRepOfBlock && isLastBlock) {
-          // La rutina se completará mediante el efecto del setExecutionTimeline
-          return;
-        }
-        if (isLastRepOfBlock) {
-          setCurrentBlockIndex(currentBlockIndex + 1);
-          setCurrentBlockRep(0);
-          setCurrentActivityIndex(0);
-        } else {
-          // Verificar si hay descanso configurado entre repeticiones
-          if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
-            const restActivity: Activity = {
-              id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
-              type: 'rest',
-              name: 'Descanso entre repeticiones',
-              icon: 'pause-circle',
-              exerciseType: 'time',
-              duration: currentBlock.restBetweenReps,
-            };
-            
-            setPendingActivities((prev) => [restActivity, ...prev]);
-            setIsProcessingPending(true);
-            setCurrentPendingIndex(0);
-            setCurrentBlockRep(currentBlockRep + 1);
-            setCurrentActivityIndex(0);
-          } else {
-            setCurrentBlockRep(currentBlockRep + 1);
-            setCurrentActivityIndex(0);
-          }
+
+        if (currentSequenceIndex >= activitySequence.length) {
+          setTimeout(async () => {
+            setIsComplete(true);
+            const totalTime = formatElapsedTime(elapsedTime);
+            await notificationService.notifyRoutineComplete(routine.name, totalTime);
+          }, 0);
         }
       } else {
         setCurrentPendingIndex(currentPendingIndex + 1);
       }
     } else {
-      // Registrar actividad como saltada
-      if (currentActivity) {
-        const skippedActivity: ExecutedActivity = {
-          activity: currentActivity,
-          blockIndex: currentBlockIndex,
-          blockName: currentBlock?.name || `Bloque ${currentBlockIndex + 1}`,
-          blockRepetition: currentBlockRep + 1,
-          status: "skipped",
-          startedAt: currentActivityStartTime,
-          completedAt: Date.now(),
-          wasPostponed: false,
-          pausedTime:
-            currentActivityPausedTime > 0
-              ? currentActivityPausedTime
-              : undefined,
-        };
-        setExecutionTimeline((prev) => {
-          const updatedTimeline = [...prev, skippedActivity];
+      const nextIndex = currentSequenceIndex + 1;
 
-          // Si es la última actividad de la rutina, completar
-          if (
-            isLastActivityInBlock &&
-            isLastRepOfBlock &&
-            isLastBlock &&
-            pendingActivities.length === 0
-          ) {
-            setTimeout(async () => {
-              setIsComplete(true);
-              const totalTime = formatElapsedTime(elapsedTime);
-              await notificationService.notifyRoutineComplete(routine.name, totalTime);
-            }, 0);
-          }
-
-          return updatedTimeline;
-        });
-      }
-
-      // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
-      setCurrentActivityStartTime(Date.now());
-      setCurrentActivityPausedTime(0);
-
-      if (isLastActivityInBlock && isLastRepOfBlock && isLastBlock) {
+      if (nextIndex >= activitySequence.length) {
         if (pendingActivities.length > 0) {
           setIsProcessingPending(true);
           setCurrentPendingIndex(0);
         } else {
-          // La rutina se completará mediante el efecto del setExecutionTimeline
-        }
-      } else if (isLastActivityInBlock) {
-        if (pendingActivities.length > 0) {
-          setIsProcessingPending(true);
-          setCurrentPendingIndex(0);
-        } else if (isLastRepOfBlock) {
-          setCurrentBlockIndex(currentBlockIndex + 1);
-          setCurrentBlockRep(0);
-          setCurrentActivityIndex(0);
-        } else {
-          // Verificar si hay descanso configurado entre repeticiones
-          if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
-            const restActivity: Activity = {
-              id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
-              type: 'rest',
-              name: 'Descanso entre repeticiones',
-              icon: 'pause-circle',
-              exerciseType: 'time',
-              duration: currentBlock.restBetweenReps,
-            };
-            
-            setPendingActivities((prev) => [restActivity, ...prev]);
-            setIsProcessingPending(true);
-            setCurrentPendingIndex(0);
-            setCurrentBlockRep(currentBlockRep + 1);
-            setCurrentActivityIndex(0);
-          } else {
-            setCurrentBlockRep(currentBlockRep + 1);
-            setCurrentActivityIndex(0);
-          }
+          setTimeout(async () => {
+            setIsComplete(true);
+            const totalTime = formatElapsedTime(elapsedTime);
+            await notificationService.notifyRoutineComplete(routine.name, totalTime);
+          }, 0);
         }
       } else {
-        setCurrentActivityIndex(currentActivityIndex + 1);
+        setCurrentSequenceIndex(nextIndex);
       }
     }
   };
@@ -1009,23 +843,27 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     // Haptic feedback al postergar
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowSkipModal(false);
+
+    if (!currentActivity) return;
+
     // Registrar actividad como postergada
-    if (currentActivity) {
-      const postponedActivity: ExecutedActivity = {
-        activity: currentActivity,
-        blockIndex: currentBlockIndex,
-        blockName: currentBlock?.name || `Bloque ${currentBlockIndex + 1}`,
-        blockRepetition: currentBlockRep + 1,
-        status: "postponed",
-        startedAt: currentActivityStartTime,
-        postponedAt: Date.now(),
-        wasPostponed: false,
-        pausedTime:
-          currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
-      };
-      setExecutionTimeline((prev) => [...prev, postponedActivity]);
-      setPendingActivities((prev) => [...prev, currentActivity]);
-    }
+    const postponedActivity: ExecutedActivity = {
+      activity: currentActivity,
+      blockIndex: currentActivity.blockIndex,
+      blockName: currentActivity.blockName,
+      blockRepetition: currentActivity.blockRepetition,
+      status: "postponed",
+      startedAt: currentActivityStartTime,
+      postponedAt: Date.now(),
+      wasPostponed: false,
+      pausedTime:
+        currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
+    };
+
+    setExecutionTimeline((prev) => [...prev, postponedActivity]);
+
+    // Agregar a pendientes
+    setPendingActivities((prev) => [...prev, currentActivity]);
 
     // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
     setCurrentActivityStartTime(Date.now());
@@ -1034,40 +872,21 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     // Notificar ejercicio postergado
     await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
-    if (isLastActivityInBlock) {
-      if (isLastRepOfBlock) {
-        setCurrentBlockIndex(currentBlockIndex + 1);
-        setCurrentBlockRep(0);
-        setCurrentActivityIndex(0);
-      } else {
-        // Verificar si hay descanso configurado entre repeticiones
-        if (currentBlock.restBetweenReps && currentBlock.restBetweenReps > 0) {
-          const restActivity: Activity = {
-            id: `rest-between-reps-${currentBlock.id}-${currentBlockRep}`,
-            type: 'rest',
-            name: 'Descanso entre repeticiones',
-            icon: 'pause-circle',
-            exerciseType: 'time',
-            duration: currentBlock.restBetweenReps,
-          };
-          
-          setPendingActivities((prev) => [restActivity, ...prev]);
-          setIsProcessingPending(true);
-          setCurrentPendingIndex(0);
-          setCurrentBlockRep(currentBlockRep + 1);
-          setCurrentActivityIndex(0);
-        } else {
-          setCurrentBlockRep(currentBlockRep + 1);
-          setCurrentActivityIndex(0);
-        }
-      }
+    // Avanzar a la siguiente actividad (sin procesarla como completada)
+    const nextIndex = currentSequenceIndex + 1;
+
+    if (nextIndex >= activitySequence.length) {
+      // Terminamos la secuencia principal, pero hay pendientes
+      setIsProcessingPending(true);
+      setCurrentPendingIndex(0);
     } else {
-      setCurrentActivityIndex(currentActivityIndex + 1);
+      setCurrentSequenceIndex(nextIndex);
     }
   };
 
-  // Verificar si se puede dejar como pendiente (no último ejercicio de última rep del bloque)
-  const canLeavePending = !(isLastActivityInBlock && isLastRepOfBlock);
+  // Verificar si se puede dejar como pendiente
+  // No se puede postergar si es un descanso automático entre repeticiones
+  const canLeavePending = currentActivity ? !currentActivity.isRestBetweenReps : false;
 
   if (!currentActivity) {
     return null;
@@ -1346,19 +1165,21 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               },
             ]}
           >
-            {currentBlock.type === "rest-block"
+            {currentActivity?.isRestBetweenReps
+              ? "Descanso entre repeticiones"
+              : currentBlock.type === "rest-block"
               ? t("executeRoutine.restBetweenBlocks")
               : currentBlock.type === "warmup"
               ? t("executeRoutine.warmup")
               : currentBlock.type === "cooldown"
               ? t("executeRoutine.cooldown")
               : t("executeRoutine.block", {
-                  current: currentBlockIndex + 1,
+                  current: currentActivity?.blockIndex ? currentActivity.blockIndex + 1 : 1,
                   total: routine.blocks.length,
                 })}{" "}
             •{" "}
             {t("executeRoutine.rep", {
-              current: currentBlockRep + 1,
+              current: currentActivity?.blockRepetition || 1,
               total: currentBlock.repetitions,
             })}
           </Text>
@@ -1519,9 +1340,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           </>
         )}
 
-        {/* Next Activity Preview - ANTES del botón para mejor visibilidad */}
+        {/* Next Activity Preview - SIMPLIFICADO */}
         {(() => {
-          // Determinar qué se viene después
           let label = "";
           let nextActivityName = "";
 
@@ -1529,55 +1349,29 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             // Estamos procesando pendientes
             if (!isLastPendingActivity) {
               label = t("executeRoutine.nextPending");
-              nextActivityName =
-                pendingActivities[currentPendingIndex + 1]?.name || "";
+              nextActivityName = pendingActivities[currentPendingIndex + 1]?.name || "";
             } else {
-              // Después de los pendientes, volvemos al flujo normal
-              if (isLastRepOfBlock) {
-                label = t("executeRoutine.nextBlock");
-                const nextBlock = routine.blocks[currentBlockIndex + 1];
-                nextActivityName = nextBlock?.activities[0]?.name || "";
-              } else {
-                label = t("executeRoutine.repeatBlock");
-                nextActivityName = currentBlock.activities[0]?.name || "";
-              }
+              // Último pendiente
+              label = t("executeRoutine.lastActivity");
+              nextActivityName = "";
             }
           } else {
-            // Flujo normal
-            if (!isLastActivityInBlock) {
-              // Siguiente actividad en el mismo bloque
-              label = t("executeRoutine.nextExercise");
-              nextActivityName =
-                currentBlock.activities[currentActivityIndex + 1]?.name || "";
-            } else if (isLastActivityInBlock && !isLastRepOfBlock) {
-              // Repetir el bloque o procesar pendientes
-              if (pendingActivities.length > 0) {
-                label = t("executeRoutine.pendingExercises", {
-                  count: pendingActivities.length,
-                });
-                nextActivityName = pendingActivities[0]?.name || "";
+            // Estamos en la secuencia principal
+            const nextIndex = currentSequenceIndex + 1;
+
+            if (nextIndex < activitySequence.length) {
+              // Hay más actividades en la secuencia
+              const nextActivity = activitySequence[nextIndex];
+
+              if (nextActivity.isRestBetweenReps) {
+                label = "Descanso entre repeticiones";
               } else {
-                label = t("executeRoutine.repeatBlock");
-                nextActivityName = currentBlock.activities[0]?.name || "";
+                label = t("executeRoutine.nextExercise");
               }
-            } else if (
-              isLastActivityInBlock &&
-              isLastRepOfBlock &&
-              !isLastBlock
-            ) {
-              // Próximo bloque o procesar pendientes
-              if (pendingActivities.length > 0) {
-                label = t("executeRoutine.pendingExercises", {
-                  count: pendingActivities.length,
-                });
-                nextActivityName = pendingActivities[0]?.name || "";
-              } else {
-                label = t("executeRoutine.nextBlock");
-                const nextBlock = routine.blocks[currentBlockIndex + 1];
-                nextActivityName = nextBlock?.activities[0]?.name || "";
-              }
+
+              nextActivityName = nextActivity.name;
             } else {
-              // Última actividad de la rutina (o pendientes si hay)
+              // Terminamos la secuencia principal
               if (pendingActivities.length > 0) {
                 label = t("executeRoutine.pendingExercises", {
                   count: pendingActivities.length,
@@ -1695,10 +1489,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       {/* Upcoming Activities Sheet */}
       {!isComplete && currentActivity && (
         <UpcomingActivitiesSheet
-          blocks={routine.blocks}
-          currentBlockIndex={currentBlockIndex}
-          currentBlockRep={currentBlockRep}
-          currentActivityIndex={currentActivityIndex}
+          activitySequence={activitySequence}
+          currentSequenceIndex={currentSequenceIndex}
           isProcessingPending={isProcessingPending}
           pendingActivities={pendingActivities}
           currentPendingIndex={currentPendingIndex}
@@ -1893,6 +1685,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.sm,
+    paddingBottom: 80, // Espacio para el sheet colapsado
   },
   iconContainer: {
     width: 120,

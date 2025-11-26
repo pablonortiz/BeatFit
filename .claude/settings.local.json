@@ -4,7 +4,10 @@
       "Bash(npx expo install:*)",
       "Bash(npm install)",
       "Bash(npm install:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(npx expo prebuild:*)",
+      "Bash(./gradlew assembleDebug:*)"
     ],
     "deny": [],
     "ask": []
