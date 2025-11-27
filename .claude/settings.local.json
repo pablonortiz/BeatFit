@@ -10,7 +10,10 @@
       "Bash(./gradlew assembleDebug:*)",
       "Bash(git branch:*)",
       "Bash(git push:*)",
-      "Bash(gh repo edit:*)"
+      "Bash(gh repo edit:*)",
+      "Bash(npx react-native:*)",
+      "Bash(npx expo export:*)",
+      "Bash(npx expo run:android:*)"
     ],
     "deny": [],
     "ask": []
