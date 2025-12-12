@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,20 +12,23 @@ import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useExercises, useRoutines } from '../hooks/useStorage';
-import { ExerciseTemplate } from '../types';
+import { ExerciseTemplate, ExerciseIcon } from '../types';
 import * as Haptics from 'expo-haptics';
 import { CustomAlert } from '../components';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import { useTranslation } from 'react-i18next';
+import { IconPicker, sanitizeExerciseIcon } from '../components/IconPicker';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageExercises'>;
 
 export default function ManageExercisesScreen({ navigation }: Props) {
-  const { exercises, deleteExercise } = useExercises();
+  const { exercises, deleteExercise, saveExercise } = useExercises();
   const { routines } = useRoutines();
   const insets = useSafeAreaInsets();
   const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
   const { t } = useTranslation();
+  const [iconPickerVisible, setIconPickerVisible] = useState(false);
+  const [exerciseToEdit, setExerciseToEdit] = useState<ExerciseTemplate | null>(null);
 
   // Calcular qué ejercicios están en uso
   const exercisesInUse = useMemo(() => {
@@ -94,11 +97,12 @@ export default function ManageExercisesScreen({ navigation }: Props) {
 
   const renderExercise = ({ item }: { item: ExerciseTemplate }) => {
     const isInUse = exercisesInUse.has(item.id);
+    const safeIcon = sanitizeExerciseIcon(item.icon as string);
 
     return (
       <View style={styles.exerciseCard}>
         <View style={styles.exerciseIcon}>
-          <Ionicons name={item.icon as any} size={32} color={theme.colors.primary} />
+          <Ionicons name={safeIcon as any} size={32} color={theme.colors.primary} />
         </View>
 
         <View style={styles.exerciseInfo}>
@@ -113,6 +117,16 @@ export default function ManageExercisesScreen({ navigation }: Props) {
             <Text style={styles.notInUseText}>{t('exercises.notInUse')}</Text>
           )}
         </View>
+
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => {
+            setExerciseToEdit({ ...item, icon: safeIcon });
+            setIconPickerVisible(true);
+          }}
+        >
+          <Ionicons name="create-outline" size={22} color={theme.colors.primary} />
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.deleteButton, isInUse && styles.deleteButtonDisabled]}
@@ -173,6 +187,20 @@ export default function ManageExercisesScreen({ navigation }: Props) {
           onDismiss={hideAlert}
         />
       )}
+
+      <IconPicker
+        visible={iconPickerVisible}
+        selectedIcon={sanitizeExerciseIcon((exerciseToEdit?.icon as string) || 'fitness')}
+        onSelect={async (icon) => {
+          if (exerciseToEdit) {
+            await saveExercise({ ...exerciseToEdit, icon });
+          }
+        }}
+        onClose={() => {
+          setExerciseToEdit(null);
+          setIconPickerVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -237,6 +265,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textTertiary,
   },
   deleteButton: {
+    padding: theme.spacing.sm,
+  },
+  editButton: {
     padding: theme.spacing.sm,
   },
   deleteButtonDisabled: {

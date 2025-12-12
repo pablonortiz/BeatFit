@@ -5,7 +5,6 @@ export type ActivityType = 'exercise' | 'rest';
 // Iconos disponibles para ejercicios
 export type ExerciseIcon =
   | 'fitness'
-  | 'run'
   | 'walk'
   | 'bicycle'
   | 'body'
@@ -18,7 +17,26 @@ export type ExerciseIcon =
   | 'time-outline'
   | 'pause'
   | 'play'
-  | 'stop';
+  | 'stop'
+  | 'stopwatch'
+  | 'alarm'
+  | 'pulse'
+  | 'flame'
+  | 'stats-chart'
+  | 'medal'
+  | 'trophy'
+  | 'tennisball'
+  | 'football'
+  | 'basketball'
+  | 'american-football'
+  | 'cloud'
+  | 'rainy'
+  | 'snow'
+  | 'leaf'
+  | 'sunny'
+  | 'moon'
+  | 'musical-notes'
+  | 'flash';
 
 // Ejercicio guardado (plantilla)
 export interface ExerciseTemplate {

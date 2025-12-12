@@ -18,9 +18,8 @@ interface IconPickerProps {
   onClose: () => void;
 }
 
-const AVAILABLE_ICONS: ExerciseIcon[] = [
+export const AVAILABLE_ICONS: ExerciseIcon[] = [
   'fitness',
-  'run',
   'walk',
   'bicycle',
   'body',
@@ -34,9 +33,34 @@ const AVAILABLE_ICONS: ExerciseIcon[] = [
   'pause',
   'play',
   'stop',
+  'stopwatch',
+  'alarm',
+  'pulse',
+  'flame',
+  'stats-chart',
+  'medal',
+  'trophy',
+  'tennisball',
+  'football',
+  'basketball',
+  'american-football',
+  'cloud',
+  'rainy',
+  'snow',
+  'leaf',
+  'sunny',
+  'moon',
+  'musical-notes',
+  'flash',
 ];
 
+export const sanitizeExerciseIcon = (icon: string): ExerciseIcon => {
+  return AVAILABLE_ICONS.includes(icon as ExerciseIcon) ? (icon as ExerciseIcon) : 'fitness';
+};
+
 export function IconPicker({ selectedIcon, onSelect, visible, onClose }: IconPickerProps) {
+  const safeSelected = sanitizeExerciseIcon(selectedIcon);
+
   const handleSelect = (icon: ExerciseIcon) => {
     onSelect(icon);
     onClose();
@@ -62,7 +86,7 @@ export function IconPicker({ selectedIcon, onSelect, visible, onClose }: IconPic
                 key={icon}
                 style={[
                   styles.iconButton,
-                  selectedIcon === icon && styles.iconButtonSelected,
+                  safeSelected === icon && styles.iconButtonSelected,
                 ]}
                 onPress={() => handleSelect(icon)}
               >
@@ -70,7 +94,7 @@ export function IconPicker({ selectedIcon, onSelect, visible, onClose }: IconPic
                   name={icon as any}
                   size={32}
                   color={
-                    selectedIcon === icon
+                    safeSelected === icon
                       ? theme.colors.primary
                       : theme.colors.textSecondary
                   }

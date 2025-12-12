@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../theme';
 import { Button, CustomAlert } from './';
-import { IconPicker } from './IconPicker';
+import { IconPicker, sanitizeExerciseIcon } from './IconPicker';
 import { DurationPicker } from './DurationPicker';
 import { Activity, ActivityType, ExerciseTemplate, ExerciseIcon, ExerciseType } from '../types';
 import { generateId, searchExercises } from '../utils/helpers';
@@ -70,7 +70,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
   const handleSelectTemplate = (template: ExerciseTemplate) => {
     setSelectedExerciseTemplate(template);
     setName(template.name);
-    setSelectedIcon(template.icon);
+    setSelectedIcon(sanitizeExerciseIcon(template.icon as string));
     setShowSuggestions(false);
   };
 
@@ -392,7 +392,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
                   style={styles.suggestionItem}
                   onPress={() => handleSelectTemplate(exercise)}
                 >
-                  <Ionicons name={exercise.icon as any} size={24} color={theme.colors.primary} />
+                  <Ionicons name={sanitizeExerciseIcon(exercise.icon as string) as any} size={24} color={theme.colors.primary} />
                   <Text style={styles.suggestionItemText}>{exercise.name}</Text>
                   <Ionicons name="chevron-forward" size={20} color={theme.colors.textTertiary} />
                 </TouchableOpacity>

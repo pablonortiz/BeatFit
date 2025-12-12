@@ -28,7 +28,8 @@
       "package": "com.beatfit.app",
       "permissions": [
         "VIBRATE",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
