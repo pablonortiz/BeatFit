@@ -20,7 +20,6 @@ import { Button, CustomAlert, UpcomingActivitiesSheet } from "../components";
 import { Ionicons } from "@expo/vector-icons";
 import { Activity, Block, Routine, WorkoutSession, ExecutedActivity } from "../types";
 import { formatTime, generateId, formatTimeLong } from "../utils/helpers";
-import { notificationService } from "../services/notification";
 import { useVoiceRecognition } from "../hooks/useVoiceRecognition";
 import { useWorkoutHistory } from "../hooks/useStorage";
 import { getBestTimeForRoutine } from "../utils/stats";
@@ -127,14 +126,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const previousActivityIdRef = useRef<string | null>(null);
   const backgroundTimeRef = useRef<number | null>(null);
   const timeRemainingRef = useRef<number>(0);
-  const isInBackgroundRef = useRef<boolean>(false);
-  const notificationUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Refs para capturar valores actuales en el intervalo
-  const elapsedTimeRef = useRef<number>(0);
-  const progressRef = useRef<number>(0);
-  const isPausedRef = useRef<boolean>(false);
-  const currentActivityRef = useRef<SequencedActivity | undefined>(undefined);
 
   // Determinar actividad actual
   const currentActivity: SequencedActivity | undefined = isProcessingPending
@@ -159,29 +150,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   }, [currentSequenceIndex, activitySequence.length, isProcessingPending]);
 
   const progress = calculateProgress();
-
-  // Inicializar notificaciones
-  useEffect(() => {
-    notificationService.initialize();
-    return () => {
-      notificationService.cleanup();
-    };
-  }, []);
-
-  // Limpiar notificación cuando se complete la rutina
-  useEffect(() => {
-    if (isComplete) {
-      // Detener notificaciones de workout
-      notificationService.stopWorkoutNotification();
-
-      // Esperar un poco para que se vea la notificación de rutina completada
-      const timer = setTimeout(() => {
-        notificationService.clearWorkoutNotification();
-      }, 2000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isComplete]);
 
   // Validar que no haya bloques vacíos
   useEffect(() => {
@@ -208,32 +176,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (!isPaused && !isComplete && currentActivity) {
       setCurrentActivityStartTime(Date.now());
-      // NO resetear currentActivityPausedTime aquí - se resetea después de guardar
-
-      // Actualizar notificación si está en segundo plano
-      if (isInBackgroundRef.current) {
-        notificationService.updateWorkoutData({
-          exerciseId: currentActivity.id,
-          routineName: routine.name,
-          currentExercise: currentActivity.name,
-          startTime: startTime,
-          isPaused: isPaused,
-          pausedAt: pauseStartTime || undefined,
-          totalPausedTime: totalPausedTime,
-          exerciseType: currentActivity.exerciseType,
-          exerciseDuration: currentActivity.duration,
-          exerciseStartTime: Date.now(),
-          exerciseReps: currentActivity.reps,
-          exercisePausedTime:
-            currentActivityPausedTime +
-            (isPaused && pauseStartTime
-              ? Math.floor((Date.now() - pauseStartTime) / 1000)
-              : 0),
-          progress: progress,
-        });
-      }
     }
-  }, [currentActivity?.id, isPaused, isComplete, progress]);
+  }, [currentActivity?.id, isPaused, isComplete]);
 
   // Cerrar modal de skip si cambia la actividad mientras está abierto
   useEffect(() => {
@@ -274,49 +218,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   useEffect(() => {
     timeRemainingRef.current = timeRemaining;
   }, [timeRemaining]);
-  
-  useEffect(() => {
-    elapsedTimeRef.current = elapsedTime;
-  }, [elapsedTime]);
-  
-  useEffect(() => {
-    progressRef.current = progress;
-  }, [progress]);
-  
-  useEffect(() => {
-    isPausedRef.current = isPaused;
-  }, [isPaused]);
-  
-  useEffect(() => {
-    currentActivityRef.current = currentActivity;
-  }, [currentActivity]);
-
-  // Función para actualizar la notificación usando refs (valores actuales)
-  const updateNotification = useCallback(() => {
-    const activity = currentActivityRef.current;
-    if (!activity || isComplete) {
-      return;
-    }
-
-    const exerciseName = activity.name;
-    const elapsedTimeFormatted = formatElapsedTime(elapsedTimeRef.current);
-    
-    let exerciseTime = '';
-    if (activity.exerciseType === 'time' && activity.duration) {
-      exerciseTime = formatTime(timeRemainingRef.current > 0 ? timeRemainingRef.current : 0);
-    } else if (activity.exerciseType === 'reps' && activity.reps) {
-      exerciseTime = `${activity.reps} reps`;
-    }
-
-    notificationService.updateWorkoutNotification({
-      routineName: routine.name,
-      currentExercise: exerciseName,
-      elapsedTime: elapsedTimeFormatted,
-      progress: progressRef.current,
-      isPaused: isPausedRef.current,
-      exerciseTime: exerciseTime,
-    });
-  }, [isComplete, routine.name]); // Solo dependencias que no cambian frecuentemente
 
   // Manejar cuando la app va a segundo plano y vuelve
   useEffect(() => {
@@ -330,41 +231,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             timeRemainingRef.current,
           );
           backgroundTimeRef.current = Date.now();
-          isInBackgroundRef.current = true;
-
-          // Iniciar notificaciones de workout con Notifee (actualiza cada segundo con countdown)
-          if (currentActivity) {
-            await notificationService.startWorkoutNotification(
-              {
-                exerciseId: currentActivity.id,
-                routineName: routine.name,
-                currentExercise: currentActivity.name,
-                startTime: startTime,
-                isPaused: isPaused,
-                pausedAt: pauseStartTime || undefined,
-                totalPausedTime: totalPausedTime,
-                exerciseType: currentActivity.exerciseType,
-                exerciseDuration: currentActivity.duration,
-                exerciseStartTime: currentActivityStartTime,
-                exerciseReps: currentActivity.reps,
-                exercisePausedTime:
-                  currentActivityPausedTime +
-                  (isPaused && pauseStartTime
-                    ? Math.floor((Date.now() - pauseStartTime) / 1000)
-                    : 0),
-                progress: progress,
-              },
-              goToNextActivity, // Callback que se llama cuando termina el ejercicio
-            );
-          }
 
         } else if (nextAppState === "active" && backgroundTimeRef.current) {
           // App vuelve a primer plano
-          isInBackgroundRef.current = false;
-
-          // Detener notificaciones de workout
-          await notificationService.stopWorkoutNotification();
-
           const timeInBackground = Math.floor(
             (Date.now() - backgroundTimeRef.current) / 1000,
           );
@@ -409,10 +278,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
     return () => {
       subscription.remove();
-      // Limpiar notificaciones al desmontar
-      notificationService.stopWorkoutNotification();
     };
-  }, [currentActivity, isPaused, isComplete, goToNextActivity, startTime, currentActivityStartTime, pauseStartTime, totalPausedTime, progress, routine.name]);
+  }, [currentActivity, isPaused, isComplete, goToNextActivity]);
 
   // Función para guardar el entrenamiento completado
   const saveCompletedWorkout = useCallback(async () => {
@@ -448,9 +315,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
   // Función para avanzar a la siguiente actividad (SIMPLIFICADA)
   const goToNextActivity = useCallback(async () => {
-    // Notificar ejercicio completado (sonido + vibración + notificación)
-    await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
-
     if (!currentActivity) return;
 
     // Registrar actividad actual como completada
@@ -484,9 +348,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
         // Si ya habíamos terminado la secuencia principal, completar rutina
         if (currentSequenceIndex >= activitySequence.length) {
-          setTimeout(async () => {
+          setTimeout(() => {
             setIsComplete(true);
-            await notificationService.playRoutineCompletion();
           }, 0);
         }
       } else {
@@ -505,48 +368,14 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           setCurrentPendingIndex(0);
         } else {
           // No hay pendientes, completar rutina
-          setTimeout(async () => {
+          setTimeout(() => {
             setIsComplete(true);
-            await notificationService.playRoutineCompletion();
           }, 0);
         }
       } else {
         // Siguiente actividad en la secuencia
         setCurrentSequenceIndex(nextIndex);
       }
-    }
-
-    // Si estamos en background, refrescar la notificación con la siguiente actividad
-    if (isInBackgroundRef.current) {
-      setTimeout(() => {
-        const next = isProcessingPending
-          ? pendingActivities[currentPendingIndex + 1] ||
-            pendingActivities[0] ||
-            activitySequence[currentSequenceIndex + 1]
-          : activitySequence[currentSequenceIndex + 1] ||
-            pendingActivities[0];
-
-        if (next) {
-          notificationService.updateWorkoutData({
-            exerciseId: next.id,
-            routineName: routine.name,
-            currentExercise: next.name,
-            startTime: startTime,
-            isPaused: false,
-            pausedAt: undefined,
-            totalPausedTime: totalPausedTime,
-            exerciseType: next.exerciseType,
-            exerciseDuration: next.duration,
-            exerciseStartTime: Date.now(),
-            exerciseReps: next.reps,
-            exercisePausedTime: 0,
-            progress:
-              isProcessingPending && pendingActivities.length > 0
-                ? currentSequenceIndex / activitySequence.length
-                : (currentSequenceIndex + 1) / activitySequence.length,
-          });
-        }
-      }, 0);
     }
   }, [
     currentActivity,
@@ -559,9 +388,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     pendingActivities,
     currentPendingIndex,
     activitySequence,
-    routine,
-    totalPausedTime,
-    startTime,
   ]);
 
   // Reconocimiento de voz para ejercicios por repeticiones
@@ -737,67 +563,20 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     return () => backHandler.remove();
   }, [navigation, isComplete, showAlert]);
 
-  const handlePause = async () => {
+  const handlePause = () => {
     // Haptic feedback al pausar/reanudar
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (!isPaused) {
-      // Pausando: guardar el timestamp actual y reproducir sonido
+      // Pausando: guardar el timestamp actual
       setPauseStartTime(Date.now());
-      notificationService.playPauseSound();
-
-      // Actualizar notificación si está en segundo plano
-      if (isInBackgroundRef.current && currentActivity) {
-        notificationService.updateWorkoutData({
-          exerciseId: currentActivity.id,
-          routineName: routine.name,
-          currentExercise: currentActivity.name,
-          startTime: startTime,
-          isPaused: true,
-          pausedAt: Date.now(),
-          totalPausedTime: totalPausedTime,
-          exerciseType: currentActivity.exerciseType,
-          exerciseDuration: currentActivity.duration,
-          exerciseStartTime: currentActivityStartTime,
-          exerciseReps: currentActivity.reps,
-          exercisePausedTime: currentActivityPausedTime,
-          progress: progress,
-        });
-      }
     } else {
-      // Reanudando: calcular el tiempo pausado y reproducir sonido
+      // Reanudando: calcular el tiempo pausado
       if (pauseStartTime) {
         const pauseDuration = Math.floor((Date.now() - pauseStartTime) / 1000);
         setCurrentActivityPausedTime((prev) => prev + pauseDuration);
         setTotalPausedTime((prev) => prev + pauseDuration);
         setPauseStartTime(null);
-      }
-      notificationService.playResumeSound();
-
-      // Actualizar notificación si está en segundo plano
-      if (isInBackgroundRef.current && currentActivity) {
-        const pauseDuration =
-          pauseStartTime !== null
-            ? Math.floor((Date.now() - pauseStartTime) / 1000)
-            : 0;
-        const newTotalPaused = totalPausedTime + pauseDuration;
-        const newExercisePaused = currentActivityPausedTime + pauseDuration;
-
-        notificationService.updateWorkoutData({
-          exerciseId: currentActivity.id,
-          routineName: routine.name,
-          currentExercise: currentActivity.name,
-          startTime: startTime,
-          isPaused: false,
-          pausedAt: undefined,
-          totalPausedTime: newTotalPaused,
-          exerciseType: currentActivity.exerciseType,
-          exerciseDuration: currentActivity.duration,
-          exerciseStartTime: currentActivityStartTime,
-          exerciseReps: currentActivity.reps,
-          exercisePausedTime: newExercisePaused,
-          progress: progress,
-        });
       }
     }
     setIsPaused(!isPaused);
@@ -834,13 +613,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     setShowSkipModal(true);
   };
 
-  const handleSkipDefinitely = async () => {
+  const handleSkipDefinitely = () => {
     // Haptic feedback al saltar
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setShowSkipModal(false);
-
-    // Notificar ejercicio saltado
-    await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
     if (!currentActivity) return;
 
@@ -872,10 +648,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         setCurrentPendingIndex(0);
 
         if (currentSequenceIndex >= activitySequence.length) {
-          setTimeout(async () => {
+          setTimeout(() => {
             setIsComplete(true);
-            const totalTime = formatElapsedTime(elapsedTime);
-            await notificationService.notifyRoutineComplete(routine.name, totalTime);
           }, 0);
         }
       } else {
@@ -889,10 +663,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           setIsProcessingPending(true);
           setCurrentPendingIndex(0);
         } else {
-          setTimeout(async () => {
+          setTimeout(() => {
             setIsComplete(true);
-            const totalTime = formatElapsedTime(elapsedTime);
-            await notificationService.notifyRoutineComplete(routine.name, totalTime);
           }, 0);
         }
       } else {
@@ -901,7 +673,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleSkipPending = async () => {
+  const handleSkipPending = () => {
     // Haptic feedback al postergar
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowSkipModal(false);
@@ -930,9 +702,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
     setCurrentActivityStartTime(Date.now());
     setCurrentActivityPausedTime(0);
-
-    // Notificar ejercicio postergado
-    await notificationService.notifyExerciseComplete(currentActivity?.name || 'Ejercicio');
 
     // Avanzar a la siguiente actividad (sin procesarla como completada)
     const nextIndex = currentSequenceIndex + 1;

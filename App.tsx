@@ -9,7 +9,6 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import { theme } from './src/theme';
 import { initI18n } from './src/i18n';
 import './src/i18n'; // Importar para que i18n esté disponible
-import { notificationService } from './src/services/notification';
 
 const ONBOARDING_KEY = '@BeatFit:onboarding_completed';
 
@@ -28,9 +27,6 @@ export default function App() {
       await initI18n();
       setI18nInitialized(true);
 
-      // Pedir permisos de notificación lo antes posible
-      await notificationService.initialize();
-      
       // Verificar onboarding
       await checkOnboarding();
     } catch (error) {

@@ -46,13 +46,6 @@ const slides: OnboardingSlide[] = [
   },
   {
     id: '4',
-    title: 'Notificaciones Inteligentes',
-    description: 'Vibración y sonidos premium te avisan cuando completas cada ejercicio',
-    icon: 'notifications',
-    color: theme.colors.info,
-  },
-  {
-    id: '5',
     title: '¡Listo para Empezar!',
     description: 'Crea tu primera rutina y comienza a entrenar. ¡Vamos!',
     icon: 'rocket',

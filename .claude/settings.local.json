@@ -13,7 +13,9 @@
       "Bash(gh repo edit:*)",
       "Bash(npx react-native:*)",
       "Bash(npx expo export:*)",
-      "Bash(npx expo run:android:*)"
+      "Bash(npx expo run:android:*)",
+      "Bash(rm:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []
