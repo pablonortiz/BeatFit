@@ -27,6 +27,7 @@ import { useCustomAlert } from "../hooks/useCustomAlert";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { workoutNotificationService } from "../services/workoutNotificationService";
+import { workoutSoundService } from "../services/workoutSoundService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ExecuteRoutine">;
 
@@ -155,9 +156,11 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Inicializar servicio de notificaciones
   useEffect(() => {
     workoutNotificationService.initialize();
+    workoutSoundService.initialize();
 
     return () => {
       workoutNotificationService.stopWorkout();
+      workoutSoundService.cleanup();
     };
   }, []);
 
@@ -339,6 +342,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Función para avanzar a la siguiente actividad (SIMPLIFICADA)
   const goToNextActivity = useCallback(async () => {
     if (!currentActivity) return;
+
+    if (AppState.currentState === "active") {
+      workoutSoundService.playExerciseComplete();
+    }
 
     // Registrar actividad actual como completada
     const completedActivity: ExecutedActivity = {
@@ -841,6 +848,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Cerrar notificación cuando se completa la rutina
   useEffect(() => {
     if (isComplete) {
+      if (AppState.currentState === "active") {
+        workoutSoundService.playRoutineComplete();
+      }
       workoutNotificationService.notifyRoutineCompleted(routine.name);
       workoutNotificationService.stopWorkout();
     }
@@ -1853,3 +1863,4 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
 });
+

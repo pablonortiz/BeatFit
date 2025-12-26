@@ -1,6 +1,7 @@
 import notifee, {
   AndroidImportance,
   AndroidStyle,
+  AndroidForegroundServiceType,
   EventType,
   Event,
 } from '@notifee/react-native';
@@ -34,54 +35,76 @@ class WorkoutNotificationService {
   private foregroundServiceResolver: (() => void) | null = null;
   private lastCompletionStartTime: number | null = null;
   private completionNotified = false;
+  private initialized = false;
+  private initializing: Promise<void> | null = null;
+  private permissionGranted: boolean | null = null;
+  private notificationsEnabled = false;
+  private lastNotificationUpdateAt: number | null = null;
+  private readonly minNotificationUpdateMs = 10000;
 
   /**
    * Inicializar los canales de notificación
   */
   async initialize() {
-    try {
-      this.registerForegroundService();
-
-      // Canal para actualizaciones de progreso (sin sonido)
-      await notifee.createChannel({
-        id: CHANNEL_ID_PROGRESS,
-        name: 'Progreso de Entrenamiento',
-        description: 'Muestra el progreso de tu entrenamiento actual',
-        importance: AndroidImportance.LOW,
-        sound: undefined,
-        vibration: false,
-      });
-
-      // Canal para alertas (con sonido)
-      await notifee.createChannel({
-        id: CHANNEL_ID_ALERT,
-        name: 'Alertas de Ejercicio',
-        description: 'Te notifica cuando completas un ejercicio',
-        importance: AndroidImportance.HIGH,
-        sound: 'default',
-        vibration: true,
-      });
-
-      // Configurar listener para eventos en background
-      notifee.onBackgroundEvent(async ({ type, detail }: Event) => {
-        console.log('[Notifee] Background event:', type);
-      });
-
-      console.log('[WorkoutNotificationService] Initialized successfully');
-    } catch (error) {
-      console.error('[WorkoutNotificationService] Error initializing:', error);
+    if (this.initialized) return;
+    if (this.initializing) {
+      await this.initializing;
+      return;
     }
+
+    this.initializing = (async () => {
+      try {
+        this.registerForegroundService();
+
+        // Canal para actualizaciones de progreso (sin sonido)
+        await notifee.createChannel({
+          id: CHANNEL_ID_PROGRESS,
+          name: 'Progreso de Entrenamiento',
+          description: 'Muestra el progreso de tu entrenamiento actual',
+          importance: AndroidImportance.LOW,
+          sound: undefined,
+          vibration: false,
+        });
+
+        // Canal para alertas (con sonido)
+        await notifee.createChannel({
+          id: CHANNEL_ID_ALERT,
+          name: 'Alertas de Ejercicio',
+          description: 'Te notifica cuando completas un ejercicio',
+          importance: AndroidImportance.HIGH,
+          sound: 'default',
+          vibration: true,
+        });
+
+        // Configurar listener para eventos en background
+        notifee.onBackgroundEvent(async ({ type, detail }: Event) => {
+          console.log('[Notifee] Background event:', type);
+        });
+
+        this.initialized = true;
+        console.log('[WorkoutNotificationService] Initialized successfully');
+      } catch (error) {
+        console.error('[WorkoutNotificationService] Error initializing:', error);
+      }
+    })();
+
+    await this.initializing;
+    this.initializing = null;
   }
 
   /**
    * Solicitar permisos de notificación
    */
   async requestPermissions() {
+    if (this.permissionGranted !== null) return this.permissionGranted;
+
     try {
       const settings = await notifee.requestPermission();
-      return settings.authorizationStatus >= 1; // 1 = authorized
+      this.permissionGranted = settings.authorizationStatus >= 1; // 1 = authorized
+      return this.permissionGranted;
     } catch (error) {
       console.error('[WorkoutNotificationService] Error requesting permissions:', error);
+      this.permissionGranted = false;
       return false;
     }
   }
@@ -91,6 +114,8 @@ class WorkoutNotificationService {
    */
   async startWorkout(data: WorkoutData, onComplete: () => void) {
     try {
+      await this.initialize();
+      this.notificationsEnabled = await this.requestPermissions();
       this.registerForegroundService();
       this.currentWorkoutData = data;
       this.onExerciseComplete = onComplete;
@@ -99,7 +124,11 @@ class WorkoutNotificationService {
       this.completionNotified = false;
 
       // Mostrar notificación inicial
-      await this.updateNotification();
+      if (this.notificationsEnabled) {
+        await this.updateNotification(true);
+      } else {
+        console.warn('[WorkoutNotificationService] Notifications disabled; skipping foreground service');
+      }
 
       // Iniciar actualizaciones automáticas cada segundo
       if (this.updateInterval) {
@@ -108,7 +137,9 @@ class WorkoutNotificationService {
 
       this.updateInterval = setInterval(() => {
         this.checkExerciseCompletion();
-        this.updateNotification();
+        if (this.notificationsEnabled) {
+          this.updateNotification();
+        }
       }, 1000);
 
       console.log('[WorkoutNotificationService] Workout started:', data.currentExercise);
@@ -130,7 +161,20 @@ class WorkoutNotificationService {
       if (data.exerciseStartTime) {
         this.lastCompletionStartTime = null;
       }
-      this.updateNotification();
+      if (this.notificationsEnabled) {
+        const forceUpdate =
+          'currentExercise' in data ||
+          'exerciseType' in data ||
+          'exerciseDuration' in data ||
+          'exerciseReps' in data ||
+          'exerciseStartTime' in data ||
+          'isPaused' in data ||
+          'pausedTime' in data ||
+          'progress' in data ||
+          'totalExercises' in data ||
+          'completedExercises' in data;
+        this.updateNotification(forceUpdate);
+      }
     }
   }
 
@@ -166,7 +210,7 @@ class WorkoutNotificationService {
    * Reproducir alerta de ejercicio completado (solo en background)
    */
   private async playCompletionAlert() {
-    if (!this.isInBackground) return;
+    if (!this.isInBackground || !this.notificationsEnabled) return;
 
     try {
       // Mostrar notificación temporal con sonido
@@ -193,10 +237,20 @@ class WorkoutNotificationService {
   /**
    * Actualizar la notificación de progreso
    */
-  private async updateNotification() {
-    if (!this.currentWorkoutData) return;
+  private async updateNotification(force = false) {
+    if (!this.currentWorkoutData || !this.notificationsEnabled) return;
 
     try {
+      const now = Date.now();
+      if (
+        !force &&
+        this.lastNotificationUpdateAt &&
+        now - this.lastNotificationUpdateAt < this.minNotificationUpdateMs
+      ) {
+        return;
+      }
+      this.lastNotificationUpdateAt = now;
+
       const {
         routineName,
         currentExercise,
@@ -211,7 +265,6 @@ class WorkoutNotificationService {
         completedExercises,
       } = this.currentWorkoutData;
 
-      const now = Date.now();
       const elapsed = Math.floor((now - exerciseStartTime) / 1000) - pausedTime;
       const remaining = exerciseType === 'time' && exerciseDuration
         ? Math.max(0, exerciseDuration - elapsed)
@@ -262,6 +315,9 @@ class WorkoutNotificationService {
           channelId: CHANNEL_ID_PROGRESS,
           importance: AndroidImportance.LOW,
           asForegroundService: true,
+          foregroundServiceTypes: [
+            AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+          ],
           ongoing: true, // No se puede deslizar para cerrar
           autoCancel: false,
           onlyAlertOnce: true, // Solo alertar la primera vez
@@ -297,6 +353,9 @@ class WorkoutNotificationService {
    */
   setInBackground(inBackground: boolean) {
     this.isInBackground = inBackground;
+    if (inBackground && this.notificationsEnabled) {
+      this.updateNotification(true);
+    }
   }
 
   /**
@@ -305,6 +364,7 @@ class WorkoutNotificationService {
   async notifyRoutineCompleted(routineName: string) {
     if (this.completionNotified) return;
     this.completionNotified = true;
+    if (!this.notificationsEnabled) return;
 
     try {
       await notifee.displayNotification({
@@ -375,3 +435,4 @@ class WorkoutNotificationService {
 }
 
 export const workoutNotificationService = new WorkoutNotificationService();
+
