@@ -33,7 +33,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "RoutinesList">;
 export default function RoutinesListScreen({ navigation }: Props) {
   const { routines, loading, deleteRoutine, reorderRoutines, refresh } =
     useRoutines();
-  const { history } = useWorkoutHistory();
+  const { history, refresh: refreshHistory } = useWorkoutHistory();
   const [refreshing, setRefreshing] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedRoutines, setSelectedRoutines] = useState<Set<string>>(
@@ -230,11 +230,12 @@ export default function RoutinesListScreen({ navigation }: Props) {
     setSelectedRoutines(new Set());
   };
 
-  // Refrescar cuando la pantalla recupera el foco (vuelve de editar)
+  // Refrescar cuando la pantalla recupera el foco (vuelve de editar o ejecutar)
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh]),
+      refreshHistory();
+    }, [refresh, refreshHistory]),
   );
 
   // Agregar botones de import/export en el header

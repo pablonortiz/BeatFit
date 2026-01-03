@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -18,7 +24,13 @@ import { RootStackParamList } from "../navigation/types";
 import { theme } from "../theme";
 import { Button, CustomAlert, UpcomingActivitiesSheet } from "../components";
 import { Ionicons } from "@expo/vector-icons";
-import { Activity, Block, Routine, WorkoutSession, ExecutedActivity } from "../types";
+import {
+  Activity,
+  Block,
+  Routine,
+  WorkoutSession,
+  ExecutedActivity,
+} from "../types";
 import { formatTime, generateId, formatTimeLong } from "../utils/helpers";
 import { useVoiceRecognition } from "../hooks/useVoiceRecognition";
 import { useWorkoutHistory } from "../hooks/useStorage";
@@ -59,13 +71,17 @@ function generateActivitySequence(routine: Routine): SequencedActivity[] {
       });
 
       // Agregar descanso entre repeticiones si no es la última repetición
-      if (rep < block.repetitions - 1 && block.restBetweenReps && block.restBetweenReps > 0) {
+      if (
+        rep < block.repetitions - 1 &&
+        block.restBetweenReps &&
+        block.restBetweenReps > 0
+      ) {
         const restActivity: SequencedActivity = {
           id: `rest-between-reps-${block.id}-${rep}`,
-          type: 'rest',
-          name: 'Descanso entre repeticiones',
-          icon: 'pause-circle',
-          exerciseType: 'time',
+          type: "rest",
+          name: "Descanso entre repeticiones",
+          icon: "pause-circle",
+          exerciseType: "time",
           duration: block.restBetweenReps,
           sequenceIndex: sequenceIndex++,
           blockIndex,
@@ -94,7 +110,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   } = useCustomAlert();
 
   // Generar secuencia de actividades al inicio
-  const activitySequence = useMemo(() => generateActivitySequence(routine), [routine]);
+  const activitySequence = useMemo(
+    () => generateActivitySequence(routine),
+    [routine],
+  );
 
   // Estado simplificado
   const [currentSequenceIndex, setCurrentSequenceIndex] = useState(0);
@@ -104,7 +123,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const [startTime] = useState(Date.now());
   const [elapsedTime, setElapsedTime] = useState(0);
   const [showSkipModal, setShowSkipModal] = useState(false);
-  const [pendingActivities, setPendingActivities] = useState<SequencedActivity[]>([]);
+  const [pendingActivities, setPendingActivities] = useState<
+    SequencedActivity[]
+  >([]);
   const [isProcessingPending, setIsProcessingPending] = useState(false);
   const [currentPendingIndex, setCurrentPendingIndex] = useState(0);
   const [executionTimeline, setExecutionTimeline] = useState<
@@ -185,7 +206,10 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Trackear cuando cambia la actividad actual (solo cuando cambia el ID)
   const lastTrackedActivityIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (currentActivity && currentActivity.id !== lastTrackedActivityIdRef.current) {
+    if (
+      currentActivity &&
+      currentActivity.id !== lastTrackedActivityIdRef.current
+    ) {
       lastTrackedActivityIdRef.current = currentActivity.id;
       setCurrentActivityStartTime(Date.now());
       setCurrentActivityPausedTime(0); // Reset paused time for new activity
@@ -244,7 +268,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             timeRemainingRef.current,
           );
           backgroundTimeRef.current = Date.now();
-
         } else if (nextAppState === "active" && backgroundTimeRef.current) {
           // App vuelve a foreground - recalcular tiempo si es necesario
           if (
@@ -254,9 +277,14 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             !isComplete &&
             timeRemainingRef.current > 0
           ) {
-            const totalElapsed = Math.floor((Date.now() - currentActivityStartTime) / 1000);
+            const totalElapsed = Math.floor(
+              (Date.now() - currentActivityStartTime) / 1000,
+            );
             const activeTime = totalElapsed - currentActivityPausedTime;
-            const recalculated = Math.max(0, currentActivity.duration - activeTime);
+            const recalculated = Math.max(
+              0,
+              currentActivity.duration - activeTime,
+            );
             setTimeRemaining(recalculated);
 
             // Si el tiempo se acabó mientras estaba en background
@@ -409,7 +437,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       // Solo resetear el tiempo si es una nueva actividad
       if (isNewActivity) {
         const computeRemaining = () => {
-          const totalElapsed = Math.floor((Date.now() - currentActivityStartTime) / 1000);
+          const totalElapsed = Math.floor(
+            (Date.now() - currentActivityStartTime) / 1000,
+          );
           const activeTime = totalElapsed - currentActivityPausedTime;
           return Math.max(0, currentActivity.duration - activeTime);
         };
@@ -418,7 +448,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       }
 
       const tick = () => {
-        const totalElapsed = Math.floor((Date.now() - currentActivityStartTime) / 1000);
+        const totalElapsed = Math.floor(
+          (Date.now() - currentActivityStartTime) / 1000,
+        );
         const activeTime = totalElapsed - currentActivityPausedTime;
         const remaining = Math.max(0, currentActivity.duration - activeTime);
         setTimeRemaining(remaining);
@@ -612,14 +644,14 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       [
         { text: t("executeRoutine.continueRoutine"), style: "cancel" },
         {
-            text: t("executeRoutine.exit"),
-            style: "destructive",
-            onPress: () => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              isExitingRef.current = true;
-              navigation.goBack();
-            },
+          text: t("executeRoutine.exit"),
+          style: "destructive",
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            isExitingRef.current = true;
+            navigation.goBack();
           },
+        },
       ],
       "warning",
       theme.colors.warning,
@@ -737,7 +769,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
   // Verificar si se puede dejar como pendiente
   // No se puede postergar si es un descanso automático entre repeticiones
-  const canLeavePending = currentActivity ? !currentActivity.isRestBetweenReps : false;
+  const canLeavePending = currentActivity
+    ? !currentActivity.isRestBetweenReps
+    : false;
 
   if (!currentActivity) {
     return null;
@@ -945,415 +979,436 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         style={[styles.container, isRestActivity && styles.containerRest]}
         edges={["top", "bottom"]}
       >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleStop}>
-          <Ionicons name="close" size={32} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.routineName}>{routine.name}</Text>
-          {pendingActivities.length > 0 && (
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingBadgeText}>
-                {pendingActivities.length} pendiente
-                {pendingActivities.length !== 1 ? "s" : ""}
-              </Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity onPress={handleSkipPress} style={styles.skipButton}>
-            <Ionicons
-              name="play-skip-forward"
-              size={24}
-              color={theme.colors.warning}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleStop}>
+            <Ionicons name="close" size={32} color={theme.colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handlePause}>
-            <Ionicons
-              name={isPaused ? "play" : "pause"}
-              size={32}
-              color={theme.colors.textPrimary}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View
-            style={[styles.progressFill, { width: `${progress * 100}%` }]}
-          />
-        </View>
-        <View style={styles.progressTextContainer}>
-          {currentBlock.type === "rest-block" && (
-            <Ionicons
-              name="pause-circle"
-              size={16}
-              color={theme.colors.rest}
-              style={{ marginRight: theme.spacing.xs }}
-            />
-          )}
-          {currentBlock.type === "warmup" && (
-            <Ionicons
-              name="flame"
-              size={16}
-              color={theme.colors.info}
-              style={{ marginRight: theme.spacing.xs }}
-            />
-          )}
-          {currentBlock.type === "cooldown" && (
-            <Ionicons
-              name="leaf"
-              size={16}
-              color={theme.colors.success}
-              style={{ marginRight: theme.spacing.xs }}
-            />
-          )}
-          <Text
-            style={[
-              styles.progressText,
-              currentBlock.type === "rest-block" && {
-                color: theme.colors.rest,
-              },
-              currentBlock.type === "warmup" && { color: theme.colors.info },
-              currentBlock.type === "cooldown" && {
-                color: theme.colors.success,
-              },
-            ]}
-          >
-            {currentActivity?.isRestBetweenReps
-              ? "Descanso entre repeticiones"
-              : currentBlock.type === "rest-block"
-              ? t("executeRoutine.restBetweenBlocks")
-              : currentBlock.type === "warmup"
-              ? t("executeRoutine.warmup")
-              : currentBlock.type === "cooldown"
-              ? t("executeRoutine.cooldown")
-              : t("executeRoutine.block", {
-                  current: currentActivity?.blockIndex ? currentActivity.blockIndex + 1 : 1,
-                  total: routine.blocks.length,
-                })}{" "}
-            •{" "}
-            {t("executeRoutine.rep", {
-              current: currentActivity?.blockRepetition || 1,
-              total: currentBlock.repetitions,
-            })}
-          </Text>
-        </View>
-      </View>
-
-      {/* Elapsed Time Chip */}
-      <View style={styles.elapsedTimeContainer}>
-        <View style={styles.elapsedTimeChip}>
-          <Ionicons name="time-outline" size={18} color={theme.colors.accent} />
-          <Text style={styles.elapsedTimeText}>
-            {formatElapsedTime(elapsedTime)}
-          </Text>
-        </View>
-        {bestTime && (
-          <View style={styles.bestTimeChip}>
-            <Ionicons
-              name="trophy-outline"
-              size={16}
-              color={theme.colors.warning}
-            />
-            <Text style={styles.bestTimeChipText}>
-              {t("executeRoutine.record", { time: formatTimeLong(bestTime) })}
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.routineName}>{routine.name}</Text>
+            {pendingActivities.length > 0 && (
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingBadgeText}>
+                  {pendingActivities.length} pendiente
+                  {pendingActivities.length !== 1 ? "s" : ""}
+                </Text>
+              </View>
+            )}
           </View>
-        )}
-      </View>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              onPress={handleSkipPress}
+              style={styles.skipButton}
+            >
+              <Ionicons
+                name="play-skip-forward"
+                size={24}
+                color={theme.colors.warning}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handlePause}>
+              <Ionicons
+                name={isPaused ? "play" : "pause"}
+                size={32}
+                color={theme.colors.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      {/* Pending Activities Indicator */}
-      {isProcessingPending && (
-        <View style={styles.pendingIndicatorContainer}>
-          <View style={styles.pendingIndicator}>
-            <Ionicons
-              name="return-down-back"
-              size={20}
-              color={theme.colors.warning}
+        {/* Progress Bar */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View
+              style={[styles.progressFill, { width: `${progress * 100}%` }]}
             />
-            <Text style={styles.pendingIndicatorText}>
-              {t("executeRoutine.exercisePending", {
-                current: currentPendingIndex + 1,
-                total: pendingActivities.length,
+          </View>
+          <View style={styles.progressTextContainer}>
+            {currentBlock.type === "rest-block" && (
+              <Ionicons
+                name="pause-circle"
+                size={16}
+                color={theme.colors.rest}
+                style={{ marginRight: theme.spacing.xs }}
+              />
+            )}
+            {currentBlock.type === "warmup" && (
+              <Ionicons
+                name="flame"
+                size={16}
+                color={theme.colors.info}
+                style={{ marginRight: theme.spacing.xs }}
+              />
+            )}
+            {currentBlock.type === "cooldown" && (
+              <Ionicons
+                name="leaf"
+                size={16}
+                color={theme.colors.success}
+                style={{ marginRight: theme.spacing.xs }}
+              />
+            )}
+            <Text
+              style={[
+                styles.progressText,
+                currentBlock.type === "rest-block" && {
+                  color: theme.colors.rest,
+                },
+                currentBlock.type === "warmup" && { color: theme.colors.info },
+                currentBlock.type === "cooldown" && {
+                  color: theme.colors.success,
+                },
+              ]}
+            >
+              {currentActivity?.isRestBetweenReps
+                ? "Descanso entre repeticiones"
+                : currentBlock.type === "rest-block"
+                ? t("executeRoutine.restBetweenBlocks")
+                : currentBlock.type === "warmup"
+                ? t("executeRoutine.warmup")
+                : currentBlock.type === "cooldown"
+                ? t("executeRoutine.cooldown")
+                : t("executeRoutine.block", {
+                    current: currentActivity?.blockIndex
+                      ? currentActivity.blockIndex + 1
+                      : 1,
+                    total: routine.blocks.length,
+                  })}{" "}
+              •{" "}
+              {t("executeRoutine.rep", {
+                current: currentActivity?.blockRepetition || 1,
+                total: currentBlock.repetitions,
               })}
             </Text>
           </View>
         </View>
-      )}
 
-      {/* Pause Indicator */}
-      {isPaused && (
-        <View style={styles.pauseIndicatorContainer}>
-          <View style={styles.pauseIndicator}>
+        {/* Elapsed Time Chip */}
+        <View style={styles.elapsedTimeContainer}>
+          <View style={styles.elapsedTimeChip}>
             <Ionicons
-              name="pause-circle"
-              size={48}
-              color={theme.colors.warning}
+              name="time-outline"
+              size={18}
+              color={theme.colors.accent}
             />
-            <Text style={styles.pauseTitle}>
-              {t("executeRoutine.pausedRoutine")}
-            </Text>
-            {pauseStartTime && (
-              <View style={styles.pauseTimeChip}>
-                <Ionicons
-                  name="timer-outline"
-                  size={18}
-                  color={theme.colors.warning}
-                />
-                <Text style={styles.pauseTimeText}>
-                  {t("executeRoutine.paused", {
-                    time: formatTime(
-                      currentActivityPausedTime + currentPauseDuration,
-                    ),
-                  })}
-                </Text>
-              </View>
-            )}
-            <Text style={styles.pauseHint}>
-              {t("executeRoutine.pressPlay")}
+            <Text style={styles.elapsedTimeText}>
+              {formatElapsedTime(elapsedTime)}
             </Text>
           </View>
-        </View>
-      )}
-
-      {/* Main Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Activity Icon */}
-        <Animated.View
-          style={[
-            styles.iconContainer,
-            isRestActivity && styles.iconContainerRest,
-            isRepsBasedActivity && styles.iconContainerSmall,
-            { transform: [{ scale: pulseAnim }] },
-          ]}
-        >
-          <Ionicons
-            name={currentActivity.icon as any}
-            size={isRepsBasedActivity ? 60 : 80}
-            color={isRestActivity ? theme.colors.rest : theme.colors.exercise}
-          />
-        </Animated.View>
-
-        {/* Activity Name */}
-        <Text style={styles.activityName}>{currentActivity.name}</Text>
-
-        {/* Timer or Reps */}
-        {isTimeBasedActivity && (
-          <Text style={styles.timer}>{formatTime(timeRemaining)}</Text>
-        )}
-
-        {isRepsBasedActivity && (
-          <>
-            <View style={styles.repsContainer}>
-              <Text style={styles.repsLabel}>Repeticiones</Text>
-              <Text style={styles.repsValue}>{currentActivity.reps}</Text>
+          {bestTime && (
+            <View style={styles.bestTimeChip}>
+              <Ionicons
+                name="trophy-outline"
+                size={16}
+                color={theme.colors.warning}
+              />
+              <Text style={styles.bestTimeChipText}>
+                {t("executeRoutine.record", { time: formatTimeLong(bestTime) })}
+              </Text>
             </View>
+          )}
+        </View>
 
-            {/* Voice Recognition Indicator - PROMINENTE */}
-            {isVoiceAvailable && isListening && (
-              <Animated.View
-                style={[
-                  styles.voiceIndicator,
-                  { transform: [{ scale: pulseAnim }] },
-                ]}
-              >
-                <Ionicons
-                  name="mic-circle"
-                  size={40}
-                  color={theme.colors.accent}
-                />
-                <Text style={styles.voiceText}>
-                  {t("executeRoutine.listening")}
-                </Text>
-                <Text style={styles.voiceHint}>
-                  {t("executeRoutine.voiceHint")}
-                </Text>
-                <Text style={styles.voiceHintSmall}>
-                  También: "hecho", "completo", "ok", "fin"
-                </Text>
-              </Animated.View>
-            )}
-
-            {/* Info cuando voz no disponible */}
-            {!isVoiceAvailable && (
-              <View style={styles.infoIndicator}>
-                <Ionicons
-                  name="information-circle"
-                  size={18}
-                  color={theme.colors.textTertiary}
-                />
-                <Text style={styles.infoText}>
-                  {t("executeRoutine.tapWhenDone")}
-                </Text>
-              </View>
-            )}
-          </>
+        {/* Pending Activities Indicator */}
+        {isProcessingPending && (
+          <View style={styles.pendingIndicatorContainer}>
+            <View style={styles.pendingIndicator}>
+              <Ionicons
+                name="return-down-back"
+                size={20}
+                color={theme.colors.warning}
+              />
+              <Text style={styles.pendingIndicatorText}>
+                {t("executeRoutine.exercisePending", {
+                  current: currentPendingIndex + 1,
+                  total: pendingActivities.length,
+                })}
+              </Text>
+            </View>
+          </View>
         )}
 
-        {/* Next Activity Preview - SIMPLIFICADO */}
-        {(() => {
-          let label = "";
-          let nextActivityName = "";
+        {/* Pause Indicator */}
+        {isPaused && (
+          <View style={styles.pauseIndicatorContainer}>
+            <View style={styles.pauseIndicator}>
+              <Ionicons
+                name="pause-circle"
+                size={48}
+                color={theme.colors.warning}
+              />
+              <Text style={styles.pauseTitle}>
+                {t("executeRoutine.pausedRoutine")}
+              </Text>
+              {pauseStartTime && (
+                <View style={styles.pauseTimeChip}>
+                  <Ionicons
+                    name="timer-outline"
+                    size={18}
+                    color={theme.colors.warning}
+                  />
+                  <Text style={styles.pauseTimeText}>
+                    {t("executeRoutine.paused", {
+                      time: formatTime(
+                        currentActivityPausedTime + currentPauseDuration,
+                      ),
+                    })}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.pauseHint}>
+                {t("executeRoutine.pressPlay")}
+              </Text>
+            </View>
+          </View>
+        )}
 
-          if (isProcessingPending) {
-            // Estamos procesando pendientes
-            if (!isLastPendingActivity) {
-              label = t("executeRoutine.nextPending");
-              nextActivityName = pendingActivities[currentPendingIndex + 1]?.name || "";
-            } else {
-              // Último pendiente
-              label = t("executeRoutine.lastActivity");
-              nextActivityName = "";
-            }
-          } else {
-            // Estamos en la secuencia principal
-            const nextIndex = currentSequenceIndex + 1;
+        {/* Main Content */}
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Activity Icon */}
+          <Animated.View
+            style={[
+              styles.iconContainer,
+              isRestActivity && styles.iconContainerRest,
+              isRepsBasedActivity && styles.iconContainerSmall,
+              { transform: [{ scale: pulseAnim }] },
+            ]}
+          >
+            <Ionicons
+              name={currentActivity.icon as any}
+              size={isRepsBasedActivity ? 60 : 80}
+              color={isRestActivity ? theme.colors.rest : theme.colors.exercise}
+            />
+          </Animated.View>
 
-            if (nextIndex < activitySequence.length) {
-              // Hay más actividades en la secuencia
-              const nextActivity = activitySequence[nextIndex];
+          {/* Activity Name */}
+          <Text style={styles.activityName}>{currentActivity.name}</Text>
 
-              if (nextActivity.isRestBetweenReps) {
-                label = "Descanso entre repeticiones";
+          {/* Timer or Reps */}
+          {isTimeBasedActivity && (
+            <Text style={styles.timer}>{formatTime(timeRemaining)}</Text>
+          )}
+
+          {isRepsBasedActivity && (
+            <>
+              <View style={styles.repsContainer}>
+                <Text style={styles.repsLabel}>Repeticiones</Text>
+                <Text style={styles.repsValue}>{currentActivity.reps}</Text>
+              </View>
+
+              {/* Voice Recognition Indicator - PROMINENTE */}
+              {isVoiceAvailable && isListening && (
+                <Animated.View
+                  style={[
+                    styles.voiceIndicator,
+                    { transform: [{ scale: pulseAnim }] },
+                  ]}
+                >
+                  <Ionicons
+                    name="mic-circle"
+                    size={40}
+                    color={theme.colors.accent}
+                  />
+                  <Text style={styles.voiceText}>
+                    {t("executeRoutine.listening")}
+                  </Text>
+                  <Text style={styles.voiceHint}>
+                    {t("executeRoutine.voiceHint")}
+                  </Text>
+                  <Text style={styles.voiceHintSmall}>
+                    También: "hecho", "completo", "ok", "fin"
+                  </Text>
+                </Animated.View>
+              )}
+
+              {/* Info cuando voz no disponible */}
+              {!isVoiceAvailable && (
+                <View style={styles.infoIndicator}>
+                  <Ionicons
+                    name="information-circle"
+                    size={18}
+                    color={theme.colors.textTertiary}
+                  />
+                  <Text style={styles.infoText}>
+                    {t("executeRoutine.tapWhenDone")}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Next Activity Preview - SIMPLIFICADO */}
+          {(() => {
+            let label = "";
+            let nextActivityName = "";
+
+            if (isProcessingPending) {
+              // Estamos procesando pendientes
+              if (!isLastPendingActivity) {
+                label = t("executeRoutine.nextPending");
+                nextActivityName =
+                  pendingActivities[currentPendingIndex + 1]?.name || "";
               } else {
-                label = t("executeRoutine.nextExercise");
-              }
-
-              nextActivityName = nextActivity.name;
-            } else {
-              // Terminamos la secuencia principal
-              if (pendingActivities.length > 0) {
-                label = t("executeRoutine.pendingExercises", {
-                  count: pendingActivities.length,
-                });
-                nextActivityName = pendingActivities[0]?.name || "";
-              } else {
+                // Último pendiente
                 label = t("executeRoutine.lastActivity");
                 nextActivityName = "";
               }
+            } else {
+              // Estamos en la secuencia principal
+              const nextIndex = currentSequenceIndex + 1;
+
+              if (nextIndex < activitySequence.length) {
+                // Hay más actividades en la secuencia
+                const nextActivity = activitySequence[nextIndex];
+
+                if (nextActivity.isRestBetweenReps) {
+                  label = "Descanso entre repeticiones";
+                } else {
+                  label = t("executeRoutine.nextExercise");
+                }
+
+                nextActivityName = nextActivity.name;
+              } else {
+                // Terminamos la secuencia principal
+                if (pendingActivities.length > 0) {
+                  label = t("executeRoutine.pendingExercises", {
+                    count: pendingActivities.length,
+                  });
+                  nextActivityName = pendingActivities[0]?.name || "";
+                } else {
+                  label = t("executeRoutine.lastActivity");
+                  nextActivityName = "";
+                }
+              }
             }
-          }
 
-          if (!label) return null;
+            if (!label) return null;
 
-          return (
-            <View style={styles.nextActivity}>
-              <Text style={styles.nextActivityLabel}>{label}</Text>
-              {nextActivityName ? (
-                <Text style={styles.nextActivityName}>{nextActivityName}</Text>
-              ) : null}
-            </View>
-          );
-        })()}
+            return (
+              <View style={styles.nextActivity}>
+                <Text style={styles.nextActivityLabel}>{label}</Text>
+                {nextActivityName ? (
+                  <Text style={styles.nextActivityName}>
+                    {nextActivityName}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })()}
+        </ScrollView>
 
-        {/* Manual Complete Button - DESPUÉS del próximo ejercicio */}
-        {isRepsBasedActivity && (
-          <Button
-            title="Marcar como Completado"
-            onPress={goToNextActivity}
-            variant="primary"
-            size="large"
-            fullWidth
-            style={styles.completeButton}
-          />
-        )}
-      </ScrollView>
+        {/* Skip Modal */}
+        <Modal
+          visible={showSkipModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSkipModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>
+                {t("executeRoutine.skipExercise")}
+              </Text>
+              <Text style={styles.modalSubtitle}>{currentActivity.name}</Text>
 
-      {/* Skip Modal */}
-      <Modal
-        visible={showSkipModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSkipModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {t("executeRoutine.skipExercise")}
-            </Text>
-            <Text style={styles.modalSubtitle}>{currentActivity.name}</Text>
-
-            <View style={styles.modalButtons}>
-              {/* Skip Definitely */}
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSkip]}
-                onPress={handleSkipDefinitely}
-              >
-                <Ionicons
-                  name="close-circle"
-                  size={48}
-                  color={theme.colors.error}
-                />
-                <Text style={styles.modalButtonTitle}>
-                  {t("executeRoutine.skip")}
-                </Text>
-                <Text style={styles.modalButtonSubtitle}>
-                  {t("executeRoutine.skipDefinitely")}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Skip Pending (only if allowed) */}
-              {canLeavePending && (
+              <View style={styles.modalButtons}>
+                {/* Skip Definitely */}
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.modalButtonPending]}
-                  onPress={handleSkipPending}
+                  style={[styles.modalButton, styles.modalButtonSkip]}
+                  onPress={handleSkipDefinitely}
                 >
                   <Ionicons
-                    name="time"
+                    name="close-circle"
                     size={48}
-                    color={theme.colors.warning}
+                    color={theme.colors.error}
                   />
                   <Text style={styles.modalButtonTitle}>
-                    {t("executeRoutine.skipPendingVerb")}
+                    {t("executeRoutine.skip")}
                   </Text>
                   <Text style={styles.modalButtonSubtitle}>
-                    {t("executeRoutine.skipPendingNoun")}
+                    {t("executeRoutine.skipDefinitely")}
                   </Text>
                 </TouchableOpacity>
-              )}
-            </View>
 
+                {/* Skip Pending (only if allowed) */}
+                {canLeavePending && (
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonPending]}
+                    onPress={handleSkipPending}
+                  >
+                    <Ionicons
+                      name="time"
+                      size={48}
+                      color={theme.colors.warning}
+                    />
+                    <Text style={styles.modalButtonTitle}>
+                      {t("executeRoutine.skipPendingVerb")}
+                    </Text>
+                    <Text style={styles.modalButtonSubtitle}>
+                      {t("executeRoutine.skipPendingNoun")}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowSkipModal(false)}
+              >
+                <Text style={styles.modalCancelText}>{t("common.cancel")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Custom Alert */}
+        {alertConfig && (
+          <CustomAlert
+            visible={alertVisible}
+            title={alertConfig.title}
+            message={alertConfig.message}
+            buttons={alertConfig.buttons}
+            icon={alertConfig.icon}
+            iconColor={alertConfig.iconColor}
+            onDismiss={hideAlert}
+          />
+        )}
+
+        {/* Floating Complete Button for Reps-based exercises */}
+        {isRepsBasedActivity && !isPaused && (
+          <View style={styles.floatingButtonContainer}>
             <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowSkipModal(false)}
+              style={styles.floatingCompleteButton}
+              onPress={() => {
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
+                goToNextActivity();
+              }}
+              activeOpacity={0.8}
             >
-              <Text style={styles.modalCancelText}>{t("common.cancel")}</Text>
+              <Ionicons name="checkmark-circle" size={32} color="#FFFFFF" />
+              <Text style={styles.floatingButtonText}>
+                {t("executeRoutine.markComplete")}
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        )}
 
-      {/* Custom Alert */}
-      {alertConfig && (
-        <CustomAlert
-          visible={alertVisible}
-          title={alertConfig.title}
-          message={alertConfig.message}
-          buttons={alertConfig.buttons}
-          icon={alertConfig.icon}
-          iconColor={alertConfig.iconColor}
-          onDismiss={hideAlert}
-        />
-      )}
-
-      {/* Upcoming Activities Sheet */}
-      {!isComplete && currentActivity && (
-        <UpcomingActivitiesSheet
-          activitySequence={activitySequence}
-          currentSequenceIndex={currentSequenceIndex}
-          isProcessingPending={isProcessingPending}
-          pendingActivities={pendingActivities}
-          currentPendingIndex={currentPendingIndex}
-        />
-      )}
+        {/* Upcoming Activities Sheet */}
+        {!isComplete && currentActivity && (
+          <UpcomingActivitiesSheet
+            activitySequence={activitySequence}
+            currentSequenceIndex={currentSequenceIndex}
+            isProcessingPending={isProcessingPending}
+            pendingActivities={pendingActivities}
+            currentPendingIndex={currentPendingIndex}
+          />
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -1543,7 +1598,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.sm,
-    paddingBottom: 80, // Espacio para el sheet colapsado
+    paddingBottom: 180, // Espacio para el sheet colapsado y el botón flotante
   },
   iconContainer: {
     width: 120,
@@ -1634,10 +1689,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textTertiary,
     flex: 1,
     fontSize: 12,
-  },
-  completeButton: {
-    maxWidth: 300,
-    marginTop: theme.spacing.lg,
   },
   nextActivity: {
     marginTop: theme.spacing.lg,
@@ -1776,5 +1827,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     maxWidth: 400,
   },
+  floatingButtonContainer: {
+    position: "absolute",
+    bottom: 140, // Above the UpcomingActivitiesSheet
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.lg,
+  },
+  floatingCompleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.round,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    minWidth: 220,
+  },
+  floatingButtonText: {
+    ...theme.typography.bodyBold,
+    color: "#FFFFFF",
+    fontSize: 18,
+  },
 });
-

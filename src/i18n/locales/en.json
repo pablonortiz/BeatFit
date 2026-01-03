@@ -188,7 +188,8 @@
     "lastActivity": "Last activity!",
     "restBetweenBlocks": "Rest Between Blocks",
     "warmup": "Warmup",
-    "cooldown": "Cooldown"
+    "cooldown": "Cooldown",
+    "markComplete": "Complete"
   },
   "history": {
     "title": "History",

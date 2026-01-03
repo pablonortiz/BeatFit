@@ -188,7 +188,8 @@
     "lastActivity": "¡Última actividad!",
     "restBetweenBlocks": "Descanso entre Bloques",
     "warmup": "Calentamiento",
-    "cooldown": "Elongación"
+    "cooldown": "Elongación",
+    "markComplete": "Completado"
   },
   "history": {
     "title": "Historial",
