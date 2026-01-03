@@ -585,6 +585,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     if (!isPaused) {
       // Pausando: guardar el timestamp actual
       setPauseStartTime(Date.now());
+      workoutSoundService.playPause();
     } else {
       // Reanudando: calcular el tiempo pausado
       if (pauseStartTime) {
@@ -593,6 +594,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         setTotalPausedTime((prev) => prev + pauseDuration);
         setPauseStartTime(null);
       }
+      workoutSoundService.playResume();
     }
     setIsPaused(!isPaused);
   };
@@ -632,6 +634,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     // Haptic feedback al saltar
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     setShowSkipModal(false);
+
+    // Play sound when skipping
+    workoutSoundService.playExerciseComplete();
 
     if (!currentActivity) return;
 
@@ -761,9 +766,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Reproducir sonido cuando se completa la rutina
   useEffect(() => {
     if (isComplete) {
-      if (AppState.currentState === "active") {
-        workoutSoundService.playRoutineComplete();
-      }
+      workoutSoundService.playRoutineComplete();
     }
   }, [isComplete]);
 
