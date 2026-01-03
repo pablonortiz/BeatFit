@@ -1,11 +1,14 @@
-const { withAppBuildGradle, withProjectBuildGradle } = require('@expo/config-plugins');
+const { withAppBuildGradle, withProjectBuildGradle, withGradleProperties } = require('@expo/config-plugins');
 
 const withAndroidXFix = (config) => {
   // Modificar project build.gradle para excluir support libraries globalmente
   config = withProjectBuildGradle(config, (config) => {
-    if (config.modResults.contents.includes('allprojects {') &&
-        !config.modResults.contents.includes('exclude group: \'com.android.support\'')) {
-      config.modResults.contents = config.modResults.contents.replace(
+    let contents = config.modResults.contents;
+
+    // Add exclude for support libraries
+    if (contents.includes('allprojects {') &&
+        !contents.includes('exclude group: \'com.android.support\'')) {
+      contents = contents.replace(
         /allprojects\s*\{/,
         `allprojects {
     configurations.all {
@@ -14,6 +17,25 @@ const withAndroidXFix = (config) => {
     `
       );
     }
+
+    config.modResults.contents = contents;
+    return config;
+  });
+
+  // Add Java 17 configuration to gradle.properties
+  config = withGradleProperties(config, (config) => {
+    const javaHomeProp = config.modResults.find(
+      (prop) => prop.type === 'property' && prop.key === 'org.gradle.java.home'
+    );
+
+    if (!javaHomeProp) {
+      config.modResults.push({
+        type: 'property',
+        key: 'org.gradle.java.home',
+        value: '/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home',
+      });
+    }
+
     return config;
   });
 

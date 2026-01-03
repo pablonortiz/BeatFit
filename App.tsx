@@ -9,7 +9,6 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import { theme } from './src/theme';
 import { initI18n } from './src/i18n';
 import './src/i18n'; // Importar para que i18n esté disponible
-import { workoutNotificationService } from './src/services/workoutNotificationService';
 
 const ONBOARDING_KEY = '@BeatFit:onboarding_completed';
 
@@ -27,10 +26,6 @@ export default function App() {
       // Inicializar i18n
       await initI18n();
       setI18nInitialized(true);
-
-      // Inicializar servicio de notificaciones y solicitar permisos
-      await workoutNotificationService.initialize();
-      await workoutNotificationService.requestPermissions();
 
       // Verificar onboarding
       await checkOnboarding();
