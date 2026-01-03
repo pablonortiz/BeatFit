@@ -182,12 +182,15 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     }
   }, [routine, navigation, showAlert]);
 
-  // Trackear cuando cambia la actividad actual
+  // Trackear cuando cambia la actividad actual (solo cuando cambia el ID)
+  const lastTrackedActivityIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!isPaused && !isComplete && currentActivity) {
+    if (currentActivity && currentActivity.id !== lastTrackedActivityIdRef.current) {
+      lastTrackedActivityIdRef.current = currentActivity.id;
       setCurrentActivityStartTime(Date.now());
+      setCurrentActivityPausedTime(0); // Reset paused time for new activity
     }
-  }, [currentActivity?.id, isPaused, isComplete]);
+  }, [currentActivity?.id]);
 
   // Cerrar modal de skip si cambia la actividad mientras está abierto
   useEffect(() => {
@@ -251,12 +254,9 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             !isComplete &&
             timeRemainingRef.current > 0
           ) {
-            const recalculated = Math.max(
-              0,
-              currentActivity.duration -
-                Math.floor((Date.now() - currentActivityStartTime) / 1000) -
-                currentActivityPausedTime,
-            );
+            const totalElapsed = Math.floor((Date.now() - currentActivityStartTime) / 1000);
+            const activeTime = totalElapsed - currentActivityPausedTime;
+            const recalculated = Math.max(0, currentActivity.duration - activeTime);
             setTimeRemaining(recalculated);
 
             // Si el tiempo se acabó mientras estaba en background
@@ -408,24 +408,19 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     if (currentActivity.exerciseType === "time" && currentActivity.duration) {
       // Solo resetear el tiempo si es una nueva actividad
       if (isNewActivity) {
-        const computeRemaining = () =>
-          Math.max(
-            0,
-            currentActivity.duration -
-              Math.floor((Date.now() - currentActivityStartTime) / 1000) -
-              currentActivityPausedTime,
-          );
+        const computeRemaining = () => {
+          const totalElapsed = Math.floor((Date.now() - currentActivityStartTime) / 1000);
+          const activeTime = totalElapsed - currentActivityPausedTime;
+          return Math.max(0, currentActivity.duration - activeTime);
+        };
         setTimeRemaining(computeRemaining());
         previousActivityIdRef.current = currentActivity.id;
       }
 
       const tick = () => {
-        const remaining = Math.max(
-          0,
-          currentActivity.duration -
-            Math.floor((Date.now() - currentActivityStartTime) / 1000) -
-            currentActivityPausedTime,
-        );
+        const totalElapsed = Math.floor((Date.now() - currentActivityStartTime) / 1000);
+        const activeTime = totalElapsed - currentActivityPausedTime;
+        const remaining = Math.max(0, currentActivity.duration - activeTime);
         setTimeRemaining(remaining);
         if (remaining <= 0) {
           goToNextActivity();
