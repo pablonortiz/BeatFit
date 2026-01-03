@@ -131,6 +131,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const [executionTimeline, setExecutionTimeline] = useState<
     ExecutedActivity[]
   >([]);
+  const executionTimelineRef = useRef<ExecutedActivity[]>([]);
   const [savedWorkoutId, setSavedWorkoutId] = useState<string | null>(null);
   const [currentActivityStartTime, setCurrentActivityStartTime] =
     useState<number>(Date.now());
@@ -309,13 +310,14 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   // Función para guardar el entrenamiento completado
   const saveCompletedWorkout = useCallback(async () => {
     const endTime = Date.now();
-    const totalActivities = routine.blocks.reduce(
-      (sum, block) => sum + block.activities.length * block.repetitions,
-      0,
-    );
+    // Use activitySequence.length to include rest-between-reps activities
+    const totalActivities = activitySequence.length;
+
+    // Use ref to get the latest executionTimeline (avoids stale closure)
+    const timeline = executionTimelineRef.current;
 
     // Contar actividades realmente completadas (no saltadas)
-    const completedCount = executionTimeline.filter(
+    const completedCount = timeline.filter(
       (item) => item.status === "completed",
     ).length;
 
@@ -330,13 +332,13 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       totalActivities,
       completedActivities: completedCount,
       blocks: routine.blocks,
-      executionTimeline, // Incluir la línea de tiempo de ejecución
+      executionTimeline: timeline, // Incluir la línea de tiempo de ejecución
     };
 
     await saveWorkout(workoutSession);
     setSavedWorkoutId(workoutId);
     return workoutId;
-  }, [routine, startTime, saveWorkout, executionTimeline]);
+  }, [routine, startTime, saveWorkout, activitySequence]);
 
   // Función para avanzar a la siguiente actividad (SIMPLIFICADA)
   const goToNextActivity = useCallback(async () => {
@@ -360,7 +362,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
     };
 
-    setExecutionTimeline((prev) => [...prev, completedActivity]);
+    // Update both state and ref to ensure ref is always current
+    setExecutionTimeline((prev) => {
+      const newTimeline = [...prev, completedActivity];
+      executionTimelineRef.current = newTimeline;
+      return newTimeline;
+    });
 
     // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
     setCurrentActivityStartTime(Date.now());
@@ -686,7 +693,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
     };
 
-    setExecutionTimeline((prev) => [...prev, skippedActivity]);
+    // Update both state and ref to ensure ref is always current
+    setExecutionTimeline((prev) => {
+      const newTimeline = [...prev, skippedActivity];
+      executionTimelineRef.current = newTimeline;
+      return newTimeline;
+    });
 
     // Resetear el tiempo de inicio y el tiempo pausado para la siguiente actividad
     setCurrentActivityStartTime(Date.now());
@@ -746,7 +758,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
         currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
     };
 
-    setExecutionTimeline((prev) => [...prev, postponedActivity]);
+    // Update both state and ref to ensure ref is always current
+    setExecutionTimeline((prev) => {
+      const newTimeline = [...prev, postponedActivity];
+      executionTimelineRef.current = newTimeline;
+      return newTimeline;
+    });
 
     // Agregar a pendientes
     setPendingActivities((prev) => [...prev, currentActivity]);

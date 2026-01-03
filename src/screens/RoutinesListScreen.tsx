@@ -428,9 +428,11 @@ export default function RoutinesListScreen({ navigation }: Props) {
   return (
     <GestureHandlerRootView style={styles.container}>
       <DraggableFlatList
+        key={`list-${history.length}`}
         data={localRoutines}
         renderItem={renderRoutineItem}
         keyExtractor={(item) => item.id}
+        extraData={history}
         onDragBegin={handleDragBegin}
         onDragEnd={handleDragEnd}
         activationDistance={10}
