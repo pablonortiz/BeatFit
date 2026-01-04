@@ -1,4 +1,4 @@
-import { Audio } from "expo-av";
+import { Audio, AVPlaybackStatus } from "expo-av";
 
 class WorkoutSoundService {
   private exerciseSound: Audio.Sound | null = null;
@@ -20,20 +20,6 @@ class WorkoutSoundService {
 
   private async loadSounds() {
     try {
-      const interruptionModeIOS =
-        Audio.InterruptionModeIOS?.DuckOthers ?? 1;
-      const interruptionModeAndroid =
-        Audio.InterruptionModeAndroid?.DuckOthers ?? 1;
-
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-        interruptionModeIOS,
-        interruptionModeAndroid,
-      });
-
       const [exerciseResult, routineResult, pauseResult, resumeResult] = await Promise.all([
         Audio.Sound.createAsync(
           require("../../assets/sounds/exercise_done_alert.wav"),
@@ -69,10 +55,54 @@ class WorkoutSoundService {
     }
   }
 
+  // Set audio mode to duck other audio, play sound, then restore
+  private async playWithDucking(sound: Audio.Sound | null) {
+    if (!sound) return;
+
+    try {
+      // Set audio mode to duck other audio
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+        interruptionModeIOS: Audio.InterruptionModeIOS?.DuckOthers ?? 2,
+        interruptionModeAndroid: Audio.InterruptionModeAndroid?.DuckOthers ?? 2,
+      });
+
+      // Play the sound and wait for it to finish
+      await sound.setPositionAsync(0);
+      await sound.playAsync();
+
+      // Wait for playback to complete
+      await new Promise<void>((resolve) => {
+        const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+          if (status.isLoaded && status.didJustFinish) {
+            sound.setOnPlaybackStatusUpdate(null);
+            resolve();
+          }
+        };
+        sound.setOnPlaybackStatusUpdate(onPlaybackStatusUpdate);
+      });
+
+      // Reset audio mode to not interfere with other audio
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: false,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+        interruptionModeIOS: Audio.InterruptionModeIOS?.MixWithOthers ?? 0,
+        interruptionModeAndroid: Audio.InterruptionModeAndroid?.DuckOthers ?? 2,
+      });
+    } catch (error) {
+      console.error("[WorkoutSoundService] Error in playWithDucking:", error);
+    }
+  }
+
   async playExerciseComplete() {
     try {
       await this.ensureInitialized();
-      await this.exerciseSound?.replayAsync();
+      await this.playWithDucking(this.exerciseSound);
     } catch (error) {
       console.error("[WorkoutSoundService] Error playing exercise sound:", error);
     }
@@ -81,7 +111,7 @@ class WorkoutSoundService {
   async playRoutineComplete() {
     try {
       await this.ensureInitialized();
-      await this.routineSound?.replayAsync();
+      await this.playWithDucking(this.routineSound);
     } catch (error) {
       console.error("[WorkoutSoundService] Error playing routine sound:", error);
     }
@@ -90,7 +120,7 @@ class WorkoutSoundService {
   async playPause() {
     try {
       await this.ensureInitialized();
-      await this.pauseSound?.replayAsync();
+      await this.playWithDucking(this.pauseSound);
     } catch (error) {
       console.error("[WorkoutSoundService] Error playing pause sound:", error);
     }
@@ -99,7 +129,7 @@ class WorkoutSoundService {
   async playResume() {
     try {
       await this.ensureInitialized();
-      await this.resumeSound?.replayAsync();
+      await this.playWithDucking(this.resumeSound);
     } catch (error) {
       console.error("[WorkoutSoundService] Error playing resume sound:", error);
     }
