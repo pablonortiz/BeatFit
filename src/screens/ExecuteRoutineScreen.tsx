@@ -52,7 +52,7 @@ interface SequencedActivity extends Activity {
 }
 
 // Función para generar la secuencia completa de actividades
-function generateActivitySequence(routine: Routine): SequencedActivity[] {
+function generateActivitySequence(routine: Routine, t: (key: string, options?: Record<string, unknown>) => string): SequencedActivity[] {
   const sequence: SequencedActivity[] = [];
   let sequenceIndex = 0;
 
@@ -64,7 +64,7 @@ function generateActivitySequence(routine: Routine): SequencedActivity[] {
           ...activity,
           sequenceIndex: sequenceIndex++,
           blockIndex,
-          blockName: block.name || `Bloque ${blockIndex + 1}`,
+          blockName: block.name || t("createRoutine.blockDefaultName", { number: blockIndex + 1 }),
           blockRepetition: rep + 1,
           isRestBetweenReps: false,
         });
@@ -79,13 +79,13 @@ function generateActivitySequence(routine: Routine): SequencedActivity[] {
         const restActivity: SequencedActivity = {
           id: `rest-between-reps-${block.id}-${rep}`,
           type: "rest",
-          name: "Descanso entre repeticiones",
+          name: t("executeRoutine.restBetweenReps"),
           icon: "pause-circle",
           exerciseType: "time",
           duration: block.restBetweenReps,
           sequenceIndex: sequenceIndex++,
           blockIndex,
-          blockName: block.name || `Bloque ${blockIndex + 1}`,
+          blockName: block.name || t("createRoutine.blockDefaultName", { number: blockIndex + 1 }),
           blockRepetition: rep + 1,
           isRestBetweenReps: true,
         };
@@ -111,8 +111,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
 
   // Generar secuencia de actividades al inicio
   const activitySequence = useMemo(
-    () => generateActivitySequence(routine),
-    [routine],
+    () => generateActivitySequence(routine, t),
+    [routine, t],
   );
 
   // Estado simplificado
@@ -190,11 +190,11 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     );
     if (emptyBlocks.length > 0) {
       showAlert(
-        "Error en la rutina",
-        "Esta rutina tiene bloques vacíos. Por favor edítala antes de ejecutarla.",
+        t("createRoutine.errorEmptyBlocks"),
+        t("createRoutine.errorEmptyBlocksMessage"),
         [
           {
-            text: "Volver",
+            text: t("common.back"),
             onPress: () => navigation.goBack(),
           },
         ],
@@ -983,7 +983,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.content}>
           <View style={styles.contentContainer}>
-            <Text style={styles.activityName}>Cargando...</Text>
+            <Text style={styles.activityName}>{t("executeRoutine.loading")}</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -1006,8 +1006,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             {pendingActivities.length > 0 && (
               <View style={styles.pendingBadge}>
                 <Text style={styles.pendingBadgeText}>
-                  {pendingActivities.length} pendiente
-                  {pendingActivities.length !== 1 ? "s" : ""}
+                  {t("executeRoutine.pendingExercises", { count: pendingActivities.length })}
                 </Text>
               </View>
             )}
@@ -1078,7 +1077,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
               ]}
             >
               {currentActivity?.isRestBetweenReps
-                ? "Descanso entre repeticiones"
+                ? t("executeRoutine.restBetweenReps")
                 : currentBlock.type === "rest-block"
                 ? t("executeRoutine.restBetweenBlocks")
                 : currentBlock.type === "warmup"
@@ -1213,7 +1212,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           {isRepsBasedActivity && (
             <>
               <View style={styles.repsContainer}>
-                <Text style={styles.repsLabel}>Repeticiones</Text>
+                <Text style={styles.repsLabel}>{t("executeRoutine.reps")}</Text>
                 <Text style={styles.repsValue}>{currentActivity.reps}</Text>
               </View>
 
@@ -1237,7 +1236,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                     {t("executeRoutine.voiceHint")}
                   </Text>
                   <Text style={styles.voiceHintSmall}>
-                    También: "hecho", "completo", "ok", "fin"
+                    {t("executeRoutine.voiceHintAlt")}
                   </Text>
                 </Animated.View>
               )}
@@ -1283,7 +1282,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
                 const nextActivity = activitySequence[nextIndex];
 
                 if (nextActivity.isRestBetweenReps) {
-                  label = "Descanso entre repeticiones";
+                  label = t("executeRoutine.restBetweenReps");
                 } else {
                   label = t("executeRoutine.nextExercise");
                 }

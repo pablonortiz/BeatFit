@@ -376,7 +376,7 @@ export function AddActivityModal({ visible, onClose, onAdd, blockId }: AddActivi
             ]}
           >
             <View style={styles.suggestionsHeader}>
-              <Text style={styles.suggestionsTitle}>Ejercicios guardados</Text>
+              <Text style={styles.suggestionsTitle}>{t("exercises.savedExercises")}</Text>
               <TouchableOpacity onPress={() => setShowSuggestions(false)}>
                 <Ionicons name="close-circle" size={20} color={theme.colors.textTertiary} />
               </TouchableOpacity>

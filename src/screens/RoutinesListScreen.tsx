@@ -376,7 +376,7 @@ export default function RoutinesListScreen({ navigation }: Props) {
                   size={20}
                   color={theme.colors.accent}
                 />
-                <Text style={styles.iconActionText}>Ver</Text>
+                <Text style={styles.iconActionText}>{t("common.view")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconActionButton}

@@ -290,7 +290,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
     const duplicatedBlock: Block = {
       ...blockToDuplicate,
       id: generateId(),
-      name: `${blockToDuplicate.name} (copia)`,
+      name: `${blockToDuplicate.name} ${t("createRoutine.copy")}`,
       activities: duplicatedActivities,
     };
 
@@ -354,12 +354,12 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
       }
     });
 
-    // Renombrar bloques normales que siguen el patrón "Bloque X"
+    // Renombrar bloques normales que siguen el patrón "Bloque X" / "Block X" / "Bloco X"
     const renamedNormalBlocks = newNormalBlocks.map((block, index) => {
-      if (/^Bloque \d+$/.test(block.name || "")) {
+      if (/^(Bloque|Block|Bloco) \d+$/.test(block.name || "")) {
         return {
           ...block,
-          name: `Bloque ${index + 1}`,
+          name: t("createRoutine.blockDefaultName", { number: index + 1 }),
         };
       }
       return block;
@@ -753,7 +753,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                     color={theme.colors.rest}
                   />
                   <Text style={styles.restBetweenRepsLabel}>
-                    Descanso entre repeticiones (opcional)
+                    {t("createRoutine.restBetweenRepsLabel")}
                   </Text>
                 </View>
                 <View style={styles.counter}>
@@ -776,7 +776,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                     <Text style={styles.restTimeText}>
                       {block.restBetweenReps
                         ? `${block.restBetweenReps}s`
-                        : "Sin descanso"}
+                        : t("createRoutine.noRest")}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -794,8 +794,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
                 </View>
                 {block.restBetweenReps && block.restBetweenReps > 0 && (
                   <Text style={styles.restBetweenRepsHint}>
-                    Se agregará un descanso de {block.restBetweenReps} segundos entre
-                    cada repetición de este bloque
+                    {t("createRoutine.restBetweenRepsHint", { seconds: block.restBetweenReps })}
                   </Text>
                 )}
               </View>
@@ -890,7 +889,7 @@ export default function CreateRoutineScreen({ navigation, route }: Props) {
             ]}
             value={block.name}
             onChangeText={(text) => handleUpdateBlockName(block.id, text)}
-            placeholder="Nombre del bloque"
+            placeholder={t("createRoutine.blockNamePlaceholder")}
             placeholderTextColor={theme.colors.textTertiary}
           />
           <TouchableOpacity onPress={() => handleDeleteBlock(block.id)}>

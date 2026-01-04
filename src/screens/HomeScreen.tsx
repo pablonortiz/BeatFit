@@ -52,7 +52,7 @@ export default function HomeScreen({ navigation }: Props) {
                 {t("home.myRoutines")}
               </Text>
               <Text style={styles.primaryCardSubtitle}>
-                Accede a tus entrenamientos
+                {t("home.accessWorkouts")}
               </Text>
             </View>
             <View style={styles.primaryIconContainer}>
@@ -64,7 +64,7 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           </View>
           <Button
-            title="Ver mis rutinas"
+            title={t("home.viewMyRoutines")}
             onPress={() => navigation.navigate("RoutinesList")}
             variant="primary"
             fullWidth
@@ -89,7 +89,7 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* Accesos rápidos */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Accesos rápidos</Text>
+          <Text style={styles.sectionTitle}>{t("home.quickAccess")}</Text>
         </View>
 
         <View style={styles.actionsRow}>

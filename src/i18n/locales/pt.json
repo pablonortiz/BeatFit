@@ -21,7 +21,8 @@
     "ok": "OK",
     "error": "Erro",
     "success": "Sucesso",
-    "info": "Informação"
+    "info": "Informação",
+    "view": "Ver"
   },
   "home": {
     "title": "BeatFit",
@@ -30,6 +31,9 @@
     "createRoutine": "Criar Rotina",
     "createRoutineDesc": "Monte seu treino do início ao fim com blocos e repetições",
     "myRoutines": "Minhas Rotinas",
+    "accessWorkouts": "Acesse seus treinos",
+    "viewMyRoutines": "Ver minhas rotinas",
+    "quickAccess": "Acesso rápido",
     "workoutHistory": "Histórico",
     "manageExercises": "Exercícios",
     "importExport": "Importar/Exportar",
@@ -111,7 +115,12 @@
     "errorDurationInvalid": "Por favor, insira uma duração válida",
     "errorRepsInvalid": "Por favor, insira um número de repetições válido",
     "successUpdated": "Rotina atualizada com sucesso",
-    "successSaved": "Rotina salva com sucesso"
+    "successSaved": "Rotina salva com sucesso",
+    "copy": "(cópia)",
+    "blockDefaultName": "Bloco {{number}}",
+    "restBetweenRepsLabel": "Descanso entre repetições (opcional)",
+    "noRest": "Sem descanso",
+    "restBetweenRepsHint": "Um descanso de {{seconds}} segundos será adicionado entre cada repetição deste bloco"
   },
   "exercises": {
     "title": "Exercícios",
@@ -187,9 +196,13 @@
     "repeatBlock": "Repetir bloco:",
     "lastActivity": "Última atividade!",
     "restBetweenBlocks": "Descanso entre Blocos",
+    "restBetweenReps": "Descanso entre repetições",
     "warmup": "Aquecimento",
     "cooldown": "Alongamento",
-    "markComplete": "Concluído"
+    "markComplete": "Concluído",
+    "loading": "Carregando...",
+    "reps": "Repetições",
+    "voiceHintAlt": "Também: \"feito\", \"completo\", \"ok\", \"terminado\""
   },
   "history": {
     "title": "Histórico",

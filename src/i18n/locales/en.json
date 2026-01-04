@@ -21,7 +21,8 @@
     "ok": "OK",
     "error": "Error",
     "success": "Success",
-    "info": "Information"
+    "info": "Information",
+    "view": "View"
   },
   "home": {
     "title": "BeatFit",
@@ -30,6 +31,9 @@
     "createRoutine": "Create Routine",
     "createRoutineDesc": "Build your workout from start to finish with blocks and repetitions",
     "myRoutines": "My Routines",
+    "accessWorkouts": "Access your workouts",
+    "viewMyRoutines": "View my routines",
+    "quickAccess": "Quick access",
     "workoutHistory": "History",
     "manageExercises": "Exercises",
     "importExport": "Import/Export",
@@ -111,7 +115,12 @@
     "errorDurationInvalid": "Please enter a valid duration",
     "errorRepsInvalid": "Please enter a valid number of repetitions",
     "successUpdated": "Routine updated successfully",
-    "successSaved": "Routine saved successfully"
+    "successSaved": "Routine saved successfully",
+    "copy": "(copy)",
+    "blockDefaultName": "Block {{number}}",
+    "restBetweenRepsLabel": "Rest between repetitions (optional)",
+    "noRest": "No rest",
+    "restBetweenRepsHint": "A {{seconds}} second rest will be added between each repetition of this block"
   },
   "exercises": {
     "title": "Exercises",
@@ -187,9 +196,13 @@
     "repeatBlock": "Repeat block:",
     "lastActivity": "Last activity!",
     "restBetweenBlocks": "Rest Between Blocks",
+    "restBetweenReps": "Rest between repetitions",
     "warmup": "Warmup",
     "cooldown": "Cooldown",
-    "markComplete": "Complete"
+    "markComplete": "Complete",
+    "loading": "Loading...",
+    "reps": "Reps",
+    "voiceHintAlt": "Also: \"done\", \"complete\", \"ok\", \"finished\""
   },
   "history": {
     "title": "History",
