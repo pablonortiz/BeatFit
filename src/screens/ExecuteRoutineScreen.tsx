@@ -1144,40 +1144,6 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {/* Pause Indicator */}
-        {isPaused && (
-          <View style={styles.pauseIndicatorContainer}>
-            <View style={styles.pauseIndicator}>
-              <Ionicons
-                name="pause-circle"
-                size={48}
-                color={theme.colors.warning}
-              />
-              <Text style={styles.pauseTitle}>
-                {t("executeRoutine.pausedRoutine")}
-              </Text>
-              {pauseStartTime && (
-                <View style={styles.pauseTimeChip}>
-                  <Ionicons
-                    name="timer-outline"
-                    size={18}
-                    color={theme.colors.warning}
-                  />
-                  <Text style={styles.pauseTimeText}>
-                    {t("executeRoutine.paused", {
-                      time: formatTime(
-                        currentActivityPausedTime + currentPauseDuration,
-                      ),
-                    })}
-                  </Text>
-                </View>
-              )}
-              <Text style={styles.pauseHint}>
-                {t("executeRoutine.pressPlay")}
-              </Text>
-            </View>
-          </View>
-        )}
 
         {/* Main Content */}
         <ScrollView
@@ -1425,6 +1391,44 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             currentPendingIndex={currentPendingIndex}
           />
         )}
+
+        {/* Pause Overlay */}
+        {isPaused && (
+          <TouchableOpacity
+            style={styles.pauseOverlay}
+            activeOpacity={1}
+            onPress={handlePause}
+          >
+            <View style={styles.pauseOverlayContent}>
+              <View style={styles.pauseOverlayIcon}>
+                <Ionicons
+                  name="pause"
+                  size={40}
+                  color={theme.colors.warning}
+                />
+              </View>
+              <Text style={styles.pauseOverlayTitle}>
+                {t("executeRoutine.pausedRoutine")}
+              </Text>
+              {pauseStartTime && (
+                <Text style={styles.pauseOverlayTime}>
+                  {formatTime(currentActivityPausedTime + currentPauseDuration)}
+                </Text>
+              )}
+              <View style={styles.pauseOverlayHint}>
+                <Ionicons
+                  name="play-circle"
+                  size={24}
+                  color={theme.colors.warning}
+                  style={{ opacity: 0.8 }}
+                />
+                <Text style={styles.pauseOverlayHintText}>
+                  {t("executeRoutine.pressPlay")}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -1566,44 +1570,50 @@ const styles = StyleSheet.create({
     color: theme.colors.warning,
     fontWeight: "600",
   },
-  pauseIndicatorContainer: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-  },
-  pauseIndicator: {
+  pauseOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.lg,
-    backgroundColor: theme.colors.warning + "15",
-    borderRadius: theme.borderRadius.lg,
+    zIndex: 100,
+  },
+  pauseOverlayContent: {
+    alignItems: "center",
+    padding: theme.spacing.xl,
+  },
+  pauseOverlayIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.warning + "25",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: theme.spacing.lg,
     borderWidth: 2,
     borderColor: theme.colors.warning,
   },
-  pauseTitle: {
-    ...theme.typography.h3,
+  pauseOverlayTitle: {
+    ...theme.typography.h2,
     color: theme.colors.warning,
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
+    textAlign: "center",
   },
-  pauseTimeChip: {
+  pauseOverlayTime: {
+    ...theme.typography.timer,
+    color: theme.colors.warning,
+    fontSize: 48,
+    marginBottom: theme.spacing.lg,
+  },
+  pauseOverlayHint: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.xs,
-    backgroundColor: theme.colors.backgroundCard,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
   },
-  pauseTimeText: {
-    ...theme.typography.bodyBold,
+  pauseOverlayHintText: {
+    ...theme.typography.body,
     color: theme.colors.warning,
-  },
-  pauseHint: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
+    opacity: 0.8,
   },
   content: {
     flex: 1,
