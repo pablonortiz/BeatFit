@@ -14,10 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useExercises, useRoutines } from '../hooks/useStorage';
 import { ExerciseTemplate, ExerciseIcon } from '../types';
 import * as Haptics from 'expo-haptics';
-import { CustomAlert } from '../components';
+import { CustomAlert, SubstitutePickerModal, PaywallModal } from '../components';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import { useTranslation } from 'react-i18next';
 import { IconPicker, sanitizeExerciseIcon } from '../components/IconPicker';
+import { usePremium } from '../contexts/PremiumContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ManageExercises'>;
 
@@ -27,8 +28,30 @@ export default function ManageExercisesScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { alertConfig, visible: alertVisible, showAlert, hideAlert } = useCustomAlert();
   const { t } = useTranslation();
+  const { isPremium } = usePremium();
   const [iconPickerVisible, setIconPickerVisible] = useState(false);
   const [exerciseToEdit, setExerciseToEdit] = useState<ExerciseTemplate | null>(null);
+  const [substitutePickerVisible, setSubstitutePickerVisible] = useState(false);
+  const [exerciseForSubstitutes, setExerciseForSubstitutes] = useState<ExerciseTemplate | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const handleManageSubstitutes = (exercise: ExerciseTemplate) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isPremium) {
+      setExerciseForSubstitutes(exercise);
+      setSubstitutePickerVisible(true);
+    } else {
+      setShowPaywall(true);
+    }
+  };
+
+  const handleSaveSubstitutes = async (substituteIds: string[]) => {
+    if (!exerciseForSubstitutes) return;
+    await saveExercise({
+      ...exerciseForSubstitutes,
+      substitutes: substituteIds,
+    });
+  };
 
   // Calcular qué ejercicios están en uso
   const exercisesInUse = useMemo(() => {
@@ -98,6 +121,7 @@ export default function ManageExercisesScreen({ navigation }: Props) {
   const renderExercise = ({ item }: { item: ExerciseTemplate }) => {
     const isInUse = exercisesInUse.has(item.id);
     const safeIcon = sanitizeExerciseIcon(item.icon as string);
+    const substituteCount = item.substitutes?.length || 0;
 
     return (
       <View style={styles.exerciseCard}>
@@ -107,16 +131,37 @@ export default function ManageExercisesScreen({ navigation }: Props) {
 
         <View style={styles.exerciseInfo}>
           <Text style={styles.exerciseName}>{item.name}</Text>
-          {isInUse && (
-            <View style={styles.inUseBadge}>
-              <Ionicons name="link" size={14} color={theme.colors.info} />
-              <Text style={styles.inUseText}>{t('exercises.inUse')}</Text>
-            </View>
-          )}
-          {!isInUse && (
+          <View style={styles.badgesRow}>
+            {isInUse && (
+              <View style={styles.inUseBadge}>
+                <Ionicons name="link" size={14} color={theme.colors.info} />
+                <Text style={styles.inUseText}>{t('exercises.inUse')}</Text>
+              </View>
+            )}
+            {substituteCount > 0 && (
+              <View style={styles.substituteBadge}>
+                <Ionicons name="swap-horizontal" size={14} color={theme.colors.accent} />
+                <Text style={styles.substituteText}>{substituteCount}</Text>
+              </View>
+            )}
+          </View>
+          {!isInUse && substituteCount === 0 && (
             <Text style={styles.notInUseText}>{t('exercises.notInUse')}</Text>
           )}
         </View>
+
+        {/* Substitute Button */}
+        <TouchableOpacity
+          style={styles.substituteButton}
+          onPress={() => handleManageSubstitutes(item)}
+        >
+          <Ionicons name="swap-horizontal" size={22} color={theme.colors.accent} />
+          {!isPremium && (
+            <View style={styles.premiumBadge}>
+              <Ionicons name="star" size={8} color={theme.colors.warning} />
+            </View>
+          )}
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.editButton}
@@ -201,6 +246,24 @@ export default function ManageExercisesScreen({ navigation }: Props) {
           setIconPickerVisible(false);
         }}
       />
+
+      {/* Substitute Picker Modal */}
+      <SubstitutePickerModal
+        visible={substitutePickerVisible}
+        exercise={exerciseForSubstitutes}
+        allExercises={exercises}
+        onSave={handleSaveSubstitutes}
+        onClose={() => {
+          setExerciseForSubstitutes(null);
+          setSubstitutePickerVisible(false);
+        }}
+      />
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -251,6 +314,11 @@ const styles = StyleSheet.create({
     ...theme.typography.bodyBold,
     marginBottom: theme.spacing.xs,
   },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
   inUseBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -260,9 +328,38 @@ const styles = StyleSheet.create({
     ...theme.typography.caption,
     color: theme.colors.info,
   },
+  substituteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 2,
+    backgroundColor: theme.colors.accent + '20',
+    borderRadius: theme.borderRadius.sm,
+  },
+  substituteText: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
+    fontWeight: '600',
+  },
   notInUseText: {
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
+  },
+  substituteButton: {
+    padding: theme.spacing.sm,
+    position: 'relative',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: theme.colors.warning,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   deleteButton: {
     padding: theme.spacing.sm,

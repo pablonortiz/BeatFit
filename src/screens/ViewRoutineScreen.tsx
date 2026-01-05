@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { theme } from '../theme';
-import { Card } from '../components';
+import { Card, PaywallModal } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 import { formatTime, formatTimeLong, calculateRoutineDuration } from '../utils/helpers';
 import { Block, Activity, BlockType } from '../types';
 import { useTranslation } from 'react-i18next';
+import { usePremium } from '../contexts/PremiumContext';
+import * as Haptics from 'expo-haptics';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ViewRoutine'>;
 
@@ -22,6 +24,17 @@ export default function ViewRoutineScreen({ navigation, route }: Props) {
   const { routine } = route.params;
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { isPremium } = usePremium();
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  const handleChooseStartPoint = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isPremium) {
+      navigation.navigate('SelectStartPoint', { routine });
+    } else {
+      setShowPaywall(true);
+    }
+  };
 
   // Calcular estadísticas de la rutina
   const stats = useMemo(() => {
@@ -202,7 +215,7 @@ export default function ViewRoutineScreen({ navigation, route }: Props) {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + 100 },
+          { paddingBottom: insets.bottom + 160 },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -276,21 +289,47 @@ export default function ViewRoutineScreen({ navigation, route }: Props) {
         {routine.blocks.map((block, index) => renderBlock(block, index))}
       </ScrollView>
 
-      {/* Botón flotante para iniciar rutina */}
+      {/* Botones flotantes */}
       <View
         style={[
           styles.floatingButtonContainer,
           { bottom: insets.bottom + theme.spacing.md },
         ]}
       >
+        {/* Choose Start Point Button */}
+        <TouchableOpacity
+          style={styles.startPointButton}
+          onPress={handleChooseStartPoint}
+        >
+          <Ionicons name="locate-outline" size={20} color={theme.colors.primary} />
+          <Text style={styles.startPointButtonText}>
+            {t('viewRoutine.chooseStartPoint')}
+          </Text>
+          {!isPremium && (
+            <View style={styles.premiumBadge}>
+              <Ionicons name="star" size={10} color={theme.colors.warning} />
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Main Start Button */}
         <TouchableOpacity
           style={styles.floatingButton}
-          onPress={() => navigation.replace('ExecuteRoutine', { routine })}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            navigation.replace('ExecuteRoutine', { routine });
+          }}
         >
           <Ionicons name="play" size={28} color={theme.colors.white} />
-          <Text style={styles.floatingButtonText}>Iniciar rutina</Text>
+          <Text style={styles.floatingButtonText}>{t('viewRoutine.start')}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        visible={showPaywall}
+        onClose={() => setShowPaywall(false)}
+      />
     </View>
   );
 }
@@ -489,6 +528,37 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: theme.spacing.lg,
     right: theme.spacing.lg,
+    gap: theme.spacing.sm,
+  },
+  startPointButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.backgroundCard,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+  },
+  startPointButtonText: {
+    ...theme.typography.body,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  premiumBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.warning,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.background,
   },
   floatingButton: {
     flexDirection: 'row',

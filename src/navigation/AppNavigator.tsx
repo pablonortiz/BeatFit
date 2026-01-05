@@ -10,6 +10,7 @@ import HomeScreen from '../screens/HomeScreen';
 import RoutinesListScreen from '../screens/RoutinesListScreen';
 import CreateRoutineScreen from '../screens/CreateRoutineScreen';
 import ViewRoutineScreen from '../screens/ViewRoutineScreen';
+import SelectStartPointScreen from '../screens/SelectStartPointScreen';
 import ExecuteRoutineScreen from '../screens/ExecuteRoutineScreen';
 import WorkoutHistoryScreen from '../screens/WorkoutHistoryScreen';
 import WorkoutDetailScreen from '../screens/WorkoutDetailScreen';
@@ -73,6 +74,11 @@ function Navigator() {
         name="ViewRoutine"
         component={ViewRoutineScreen}
         options={{ title: t('viewRoutine.title') }}
+      />
+      <Stack.Screen
+        name="SelectStartPoint"
+        component={SelectStartPointScreen}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="ExecuteRoutine"

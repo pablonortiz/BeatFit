@@ -22,7 +22,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
 import { theme } from "../theme";
-import { Button, CustomAlert, UpcomingActivitiesSheet } from "../components";
+import { Button, CustomAlert, UpcomingActivitiesSheet, PaywallModal } from "../components";
 import { Ionicons } from "@expo/vector-icons";
 import {
   Activity,
@@ -33,12 +33,13 @@ import {
 } from "../types";
 import { formatTime, generateId, formatTimeLong } from "../utils/helpers";
 import { useVoiceRecognition } from "../hooks/useVoiceRecognition";
-import { useWorkoutHistory } from "../hooks/useStorage";
+import { useWorkoutHistory, useExercises } from "../hooks/useStorage";
 import { getBestTimeForRoutine } from "../utils/stats";
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import * as Haptics from "expo-haptics";
 import { useTranslation } from "react-i18next";
 import { workoutSoundService } from "../services/workoutSoundService";
+import { usePremium } from "../contexts/PremiumContext";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ExecuteRoutine">;
 
@@ -98,8 +99,10 @@ function generateActivitySequence(routine: Routine, t: (key: string, options?: R
 }
 
 export default function ExecuteRoutineScreen({ navigation, route }: Props) {
-  const { routine } = route.params;
+  const { routine, startingIndex = 0 } = route.params;
   const { saveWorkout, history } = useWorkoutHistory();
+  const { exercises } = useExercises();
+  const { isPremium } = usePremium();
   const bestTime = getBestTimeForRoutine(routine.id, history);
   const { t } = useTranslation();
   const {
@@ -115,8 +118,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     [routine, t],
   );
 
-  // Estado simplificado
-  const [currentSequenceIndex, setCurrentSequenceIndex] = useState(0);
+  // Estado simplificado - use startingIndex if provided
+  const [currentSequenceIndex, setCurrentSequenceIndex] = useState(startingIndex);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -140,6 +143,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const [pauseStartTime, setPauseStartTime] = useState<number | null>(null);
   const [totalPausedTime, setTotalPausedTime] = useState<number>(0);
   const [currentPauseDuration, setCurrentPauseDuration] = useState<number>(0);
+  const [currentSubstituteIndex, setCurrentSubstituteIndex] = useState<number>(-1); // -1 = original, 0+ = substitute index
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -159,6 +164,55 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
   const currentBlock = currentActivity
     ? routine.blocks[currentActivity.blockIndex]
     : routine.blocks[0];
+
+  // Get available substitutes for current exercise
+  const getAvailableSubstitutes = useMemo(() => {
+    if (!currentActivity || currentActivity.type !== 'exercise' || !currentActivity.exerciseTemplateId) {
+      return [];
+    }
+    const exerciseTemplate = exercises.find(e => e.id === currentActivity.exerciseTemplateId);
+    if (!exerciseTemplate?.substitutes || exerciseTemplate.substitutes.length === 0) {
+      return [];
+    }
+    // Get full exercise info for each substitute
+    return exerciseTemplate.substitutes
+      .map(subId => exercises.find(e => e.id === subId))
+      .filter((e): e is typeof exercises[0] => e !== undefined);
+  }, [currentActivity, exercises]);
+
+  // Displayed activity (with possible substitute info)
+  const displayedActivity = useMemo(() => {
+    if (!currentActivity) return null;
+    if (currentSubstituteIndex < 0 || getAvailableSubstitutes.length === 0) {
+      return currentActivity;
+    }
+    const substitute = getAvailableSubstitutes[currentSubstituteIndex];
+    if (!substitute) {
+      return currentActivity;
+    }
+    return {
+      ...currentActivity,
+      name: substitute.name,
+      icon: substitute.icon,
+    };
+  }, [currentActivity, currentSubstituteIndex, getAvailableSubstitutes]);
+
+  // Cycle through substitutes
+  const cycleSubstitute = useCallback(() => {
+    if (!isPremium) {
+      setShowPaywall(true);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const totalOptions = getAvailableSubstitutes.length + 1; // +1 for original
+    setCurrentSubstituteIndex(prev => {
+      const next = prev + 1;
+      if (next >= getAvailableSubstitutes.length) {
+        return -1; // Back to original
+      }
+      return next;
+    });
+  }, [isPremium, getAvailableSubstitutes.length]);
 
   const isLastPendingActivity =
     currentPendingIndex === pendingActivities.length - 1;
@@ -214,6 +268,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       lastTrackedActivityIdRef.current = currentActivity.id;
       setCurrentActivityStartTime(Date.now());
       setCurrentActivityPausedTime(0); // Reset paused time for new activity
+      setCurrentSubstituteIndex(-1); // Reset substitute index when activity changes
     }
   }, [currentActivity?.id]);
 
@@ -348,6 +403,16 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       workoutSoundService.playExerciseComplete();
     }
 
+    // Check if exercise was substituted
+    const substituteInfo =
+      currentSubstituteIndex >= 0 && getAvailableSubstitutes[currentSubstituteIndex]
+        ? {
+            name: getAvailableSubstitutes[currentSubstituteIndex].name,
+            icon: getAvailableSubstitutes[currentSubstituteIndex].icon,
+            originalName: currentActivity.name,
+          }
+        : undefined;
+
     // Registrar actividad actual como completada
     const completedActivity: ExecutedActivity = {
       activity: currentActivity,
@@ -360,6 +425,7 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
       wasPostponed: isProcessingPending, // True si vino de pendientes
       pausedTime:
         currentActivityPausedTime > 0 ? currentActivityPausedTime : undefined,
+      substitutedWith: substituteInfo,
     };
 
     // Update both state and ref to ensure ref is always current
@@ -424,6 +490,8 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
     pendingActivities,
     currentPendingIndex,
     activitySequence,
+    currentSubstituteIndex,
+    getAvailableSubstitutes,
   ]);
 
   // Reconocimiento de voz para ejercicios por repeticiones
@@ -1161,14 +1229,24 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             ]}
           >
             <Ionicons
-              name={currentActivity.icon as any}
+              name={(displayedActivity?.icon || currentActivity.icon) as any}
               size={isRepsBasedActivity ? 60 : 80}
               color={isRestActivity ? theme.colors.rest : theme.colors.exercise}
             />
           </Animated.View>
 
           {/* Activity Name */}
-          <Text style={styles.activityName}>{currentActivity.name}</Text>
+          <Text style={styles.activityName}>{displayedActivity?.name || currentActivity.name}</Text>
+
+          {/* Substitute indicator */}
+          {currentSubstituteIndex >= 0 && (
+            <View style={styles.substituteIndicator}>
+              <Ionicons name="swap-horizontal" size={14} color={theme.colors.accent} />
+              <Text style={styles.substituteIndicatorText}>
+                {t('executeRoutine.substitute')}
+              </Text>
+            </View>
+          )}
 
           {/* Timer or Reps */}
           {isTimeBasedActivity && (
@@ -1381,6 +1459,22 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
           </View>
         )}
 
+        {/* Floating Substitute Button */}
+        {getAvailableSubstitutes.length > 0 && !isPaused && !isComplete && (
+          <TouchableOpacity
+            style={styles.floatingSubstituteButton}
+            onPress={cycleSubstitute}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="swap-horizontal" size={24} color="#FFFFFF" />
+            {!isPremium && (
+              <View style={styles.substitutePremiumBadge}>
+                <Ionicons name="star" size={8} color={theme.colors.warning} />
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+
         {/* Upcoming Activities Sheet */}
         {!isComplete && currentActivity && (
           <UpcomingActivitiesSheet
@@ -1429,6 +1523,12 @@ export default function ExecuteRoutineScreen({ navigation, route }: Props) {
             </View>
           </TouchableOpacity>
         )}
+
+        {/* Paywall Modal */}
+        <PaywallModal
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+        />
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -1881,5 +1981,49 @@ const styles = StyleSheet.create({
     ...theme.typography.bodyBold,
     color: "#FFFFFF",
     fontSize: 18,
+  },
+  substituteIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.accent + "20",
+    borderRadius: theme.borderRadius.md,
+  },
+  substituteIndicatorText: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
+    fontWeight: "600",
+  },
+  floatingSubstituteButton: {
+    position: "absolute",
+    right: theme.spacing.lg,
+    top: 200,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: theme.colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  substitutePremiumBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: theme.colors.warning,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: theme.colors.background,
   },
 });

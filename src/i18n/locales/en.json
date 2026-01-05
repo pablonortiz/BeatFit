@@ -69,7 +69,38 @@
     "estimatedTime": "~{{time}}"
   },
   "viewRoutine": {
-    "title": "Routine Details"
+    "title": "Routine Details",
+    "start": "Start",
+    "chooseStartPoint": "Choose Start Point"
+  },
+  "selectStartPoint": {
+    "title": "Choose Start Point",
+    "startFromHere": "Start from here",
+    "selectActivity": "Tap any activity to select where to start",
+    "activities": "{{count}} activity",
+    "activities_plural": "{{count}} activities",
+    "repetitions": "{{count}} repetition",
+    "repetitions_plural": "{{count}} repetitions"
+  },
+  "premium": {
+    "title": "BeatFit Premium",
+    "subtitle": "Unlock all features",
+    "subscribe": "Subscribe Now",
+    "restore": "Restore Purchases",
+    "monthlyPrice": "{{price}}/month",
+    "alreadyPremium": "You're Premium!",
+    "purchaseError": "Purchase failed. Please try again.",
+    "restoreError": "Could not restore purchases.",
+    "restoreSuccess": "Purchases restored successfully",
+    "restoreFailed": "No purchases to restore",
+    "features": {
+      "startAnyPointTitle": "Start Anywhere",
+      "startAnyPoint": "Begin your routine from any exercise or block",
+      "substitutesTitle": "Substitute Exercises",
+      "substitutes": "Swap exercises during your workout",
+      "moreFeaturesTitle": "More Coming Soon",
+      "moreFeatures": "Priority support and future features"
+    }
   },
   "createRoutine": {
     "title": "New Routine",
@@ -148,7 +179,11 @@
     "inUseCount": "{{count}} in use",
     "notInUse": "Not used in any routine",
     "cannotDelete": "Cannot delete",
-    "cannotDeleteMessage": "This exercise is being used in one or more routines. Delete those routines first."
+    "cannotDeleteMessage": "This exercise is being used in one or more routines. Delete those routines first.",
+    "selectSubstitutes": "Select Substitutes",
+    "substitutesCount": "{{count}} substitute",
+    "substitutesCount_plural": "{{count}} substitutes",
+    "searchExercises": "Search exercises..."
   },
   "executeRoutine": {
     "ready": "Ready to start?",
@@ -202,7 +237,8 @@
     "markComplete": "Complete",
     "loading": "Loading...",
     "reps": "Reps",
-    "voiceHintAlt": "Also: \"done\", \"complete\", \"ok\", \"finished\""
+    "voiceHintAlt": "Also: \"done\", \"complete\", \"ok\", \"finished\"",
+    "substitute": "Substitute"
   },
   "history": {
     "title": "History",
@@ -242,7 +278,8 @@
     "repetitions": "{{count}} repetition",
     "repetitions_plural": "{{count}} repetitions",
     "activities": "{{count}} activity",
-    "activities_plural": "{{count}} activities"
+    "activities_plural": "{{count}} activities",
+    "substitutedFrom": "Replaced: {{original}}"
   },
   "importExport": {
     "title": "Import/Export",

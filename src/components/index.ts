@@ -6,3 +6,5 @@ export { CustomAlert } from './CustomAlert';
 export type { AlertButton, CustomAlertProps } from './CustomAlert';
 export { EditActivityModal } from './EditActivityModal';
 export { UpcomingActivitiesSheet } from './UpcomingActivitiesSheet';
+export { PaywallModal } from './PaywallModal';
+export { SubstitutePickerModal } from './SubstitutePickerModal';

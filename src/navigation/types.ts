@@ -5,7 +5,8 @@ export type RootStackParamList = {
   RoutinesList: undefined;
   CreateRoutine: { routine?: Routine };
   ViewRoutine: { routine: Routine };
-  ExecuteRoutine: { routine: Routine };
+  SelectStartPoint: { routine: Routine };
+  ExecuteRoutine: { routine: Routine; startingIndex?: number };
   ExerciseManager: undefined;
   ManageExercises: undefined;
   WorkoutHistory: undefined;

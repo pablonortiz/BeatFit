@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import { PremiumProvider } from './src/contexts/PremiumContext';
 import { theme } from './src/theme';
 import { initI18n } from './src/i18n';
 import './src/i18n'; // Importar para que i18n esté disponible
@@ -72,16 +73,18 @@ const checkOnboarding = async () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <View style={styles.container}>
-          <StatusBar style="light" />
-          {showOnboarding ? (
-            <OnboardingScreen onComplete={handleOnboardingComplete} />
-          ) : (
-            <AppNavigator />
-          )}
-        </View>
-      </SafeAreaProvider>
+      <PremiumProvider>
+        <SafeAreaProvider>
+          <View style={styles.container}>
+            <StatusBar style="light" />
+            {showOnboarding ? (
+              <OnboardingScreen onComplete={handleOnboardingComplete} />
+            ) : (
+              <AppNavigator />
+            )}
+          </View>
+        </SafeAreaProvider>
+      </PremiumProvider>
     </GestureHandlerRootView>
   );
 }

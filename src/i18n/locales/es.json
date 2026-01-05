@@ -69,7 +69,38 @@
     "estimatedTime": "~{{time}}"
   },
   "viewRoutine": {
-    "title": "Detalle de Rutina"
+    "title": "Detalle de Rutina",
+    "start": "Iniciar",
+    "chooseStartPoint": "Elegir Punto de Inicio"
+  },
+  "selectStartPoint": {
+    "title": "Elegir Punto de Inicio",
+    "startFromHere": "Comenzar desde aquí",
+    "selectActivity": "Toca cualquier actividad para seleccionar dónde empezar",
+    "activities": "{{count}} actividad",
+    "activities_plural": "{{count}} actividades",
+    "repetitions": "{{count}} repetición",
+    "repetitions_plural": "{{count}} repeticiones"
+  },
+  "premium": {
+    "title": "BeatFit Premium",
+    "subtitle": "Desbloquea todas las funciones",
+    "subscribe": "Suscribirse Ahora",
+    "restore": "Restaurar Compras",
+    "monthlyPrice": "{{price}}/mes",
+    "alreadyPremium": "¡Ya eres Premium!",
+    "purchaseError": "La compra falló. Por favor intenta de nuevo.",
+    "restoreError": "No se pudieron restaurar las compras.",
+    "restoreSuccess": "Compras restauradas exitosamente",
+    "restoreFailed": "No hay compras para restaurar",
+    "features": {
+      "startAnyPointTitle": "Comienza Donde Quieras",
+      "startAnyPoint": "Inicia tu rutina desde cualquier ejercicio o bloque",
+      "substitutesTitle": "Sustituir Ejercicios",
+      "substitutes": "Cambia ejercicios durante tu entrenamiento",
+      "moreFeaturesTitle": "Más Próximamente",
+      "moreFeatures": "Soporte prioritario y futuras funciones"
+    }
   },
   "createRoutine": {
     "title": "Nueva Rutina",
@@ -148,7 +179,11 @@
     "inUseCount": "{{count}} en uso",
     "notInUse": "No usado en ninguna rutina",
     "cannotDelete": "No se puede eliminar",
-    "cannotDeleteMessage": "Este ejercicio está siendo usado en una o más rutinas. Elimina esas rutinas primero."
+    "cannotDeleteMessage": "Este ejercicio está siendo usado en una o más rutinas. Elimina esas rutinas primero.",
+    "selectSubstitutes": "Seleccionar Sustitutos",
+    "substitutesCount": "{{count}} sustituto",
+    "substitutesCount_plural": "{{count}} sustitutos",
+    "searchExercises": "Buscar ejercicios..."
   },
   "executeRoutine": {
     "ready": "¿Listo para comenzar?",
@@ -202,7 +237,8 @@
     "markComplete": "Completado",
     "loading": "Cargando...",
     "reps": "Repeticiones",
-    "voiceHintAlt": "También: \"hecho\", \"completo\", \"ok\", \"fin\""
+    "voiceHintAlt": "También: \"hecho\", \"completo\", \"ok\", \"fin\"",
+    "substitute": "Sustituto"
   },
   "history": {
     "title": "Historial",
@@ -242,7 +278,8 @@
     "repetitions": "{{count}} repetición",
     "repetitions_plural": "{{count}} repeticiones",
     "activities": "{{count}} actividad",
-    "activities_plural": "{{count}} actividades"
+    "activities_plural": "{{count}} actividades",
+    "substitutedFrom": "Reemplazó: {{original}}"
   },
   "importExport": {
     "title": "Importar/Exportar",

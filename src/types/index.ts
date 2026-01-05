@@ -45,6 +45,7 @@ export interface ExerciseTemplate {
   icon: ExerciseIcon;
   createdAt: number;
   lastUsed?: number;
+  substitutes?: string[]; // Array of exercise template IDs that can substitute this exercise
 }
 
 // Actividad individual en una rutina
@@ -111,6 +112,12 @@ export interface ExecutedActivity {
   postponedAt?: number; // Timestamp de cuando se postergó (si fue postergada)
   wasPostponed: boolean; // Si esta actividad fue postergada antes
   pausedTime?: number; // Tiempo total pausado en esta actividad (en segundos)
+  substitutedWith?: {
+    // Info when exercise was substituted during workout
+    name: string;
+    icon: ExerciseIcon;
+    originalName: string;
+  };
 }
 
 // Entrenamiento completado (historial)

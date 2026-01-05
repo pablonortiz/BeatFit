@@ -63,6 +63,12 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
     postponedAt?: number;
     actualStartedAt?: number;
     actualCompletedAt?: number;
+    pausedTime?: number;
+    substitutedWith?: {
+      name: string;
+      icon: string;
+      originalName: string;
+    };
   }> = [];
 
   if (workout.executionTimeline && workout.executionTimeline.length > 0) {
@@ -84,6 +90,7 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
         actualStartedAt: executed.startedAt,
         actualCompletedAt: executed.completedAt,
         pausedTime: executed.pausedTime,
+        substitutedWith: executed.substitutedWith,
       });
     });
   } else {
@@ -116,6 +123,11 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
       actualStartedAt?: number;
       actualCompletedAt?: number;
       pausedTime?: number;
+      substitutedWith?: {
+        name: string;
+        icon: string;
+        originalName: string;
+      };
     },
     index: number
   ) => {
@@ -124,6 +136,7 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
     const isSkipped = activity.status === 'skipped';
     const wasPostponedLater = activity.status === 'postponed';
     const wasPostponedBefore = activity.wasPostponed;
+    const wasSubstituted = !!activity.substitutedWith;
 
     // Determinar color del icono basado en estado
     let iconColor = isRest ? theme.colors.rest : theme.colors.exercise;
@@ -140,13 +153,17 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
       iconBorderColor = theme.colors.warning;
     }
 
+    // Display name and icon - use substitute info if available
+    const displayName = wasSubstituted ? activity.substitutedWith!.name : activity.name;
+    const displayIcon = wasSubstituted ? activity.substitutedWith!.icon : activity.icon;
+
     return (
       <View key={`${activity.id}-${index}`} style={styles.timelineItemContainer}>
         <View style={styles.timelineItem}>
           {/* Icon Container */}
           <View style={[styles.timelineIcon, { backgroundColor: iconBgColor, borderColor: iconBorderColor }]}>
             <Ionicons
-              name={activity.icon as any}
+              name={displayIcon as any}
               size={32}
               color={iconColor}
             />
@@ -160,12 +177,17 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
                 <Ionicons name="return-down-back" size={14} color="white" />
               </View>
             )}
+            {wasSubstituted && (
+              <View style={[styles.statusBadge, { backgroundColor: theme.colors.accent }]}>
+                <Ionicons name="swap-horizontal" size={14} color="white" />
+              </View>
+            )}
           </View>
 
           {/* Activity Info */}
           <View style={styles.timelineContent}>
             <Text style={[styles.activityName, isSkipped && styles.activityNameSkipped]} numberOfLines={2}>
-              {activity.name}
+              {displayName}
             </Text>
             <View style={styles.activityMeta}>
               <View style={styles.metaItem}>
@@ -205,6 +227,14 @@ export default function WorkoutDetailScreen({ navigation, route }: Props) {
             )}
             {wasPostponedBefore && (
               <Text style={[styles.statusLabel, { color: theme.colors.warning }]}>{t("workoutDetail.completedLater")}</Text>
+            )}
+            {wasSubstituted && (
+              <View style={styles.substituteIndicator}>
+                <Ionicons name="swap-horizontal" size={12} color={theme.colors.accent} />
+                <Text style={styles.substituteText}>
+                  {t("workoutDetail.substitutedFrom", { original: activity.substitutedWith!.originalName })}
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -614,6 +644,23 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     fontSize: 11,
     marginTop: theme.spacing.xs,
+    fontWeight: '600',
+  },
+  substituteIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 3,
+    backgroundColor: theme.colors.accent + '20',
+    borderRadius: theme.borderRadius.sm,
+    alignSelf: 'center',
+  },
+  substituteText: {
+    ...theme.typography.caption,
+    color: theme.colors.accent,
+    fontSize: 10,
     fontWeight: '600',
   },
 });
