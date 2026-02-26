@@ -1,64 +1,64 @@
-# BeatFit - Tu Entrenador Personal
+# BeatFit - Your Personal Trainer
 
-BeatFit es una aplicación móvil de React Native diseñada para ayudarte a contabilizar tiempos y repeticiones durante tus entrenamientos. Con una interfaz intuitiva y premium, BeatFit hace que seguir tu rutina de ejercicios sea fácil y sin interrupciones.
+BeatFit is a React Native mobile app designed to help you track times and reps during your workouts. With an intuitive, premium interface, BeatFit makes following your exercise routine easy and seamless.
 
-## Características Principales
+## Key Features
 
-### 👋 Onboarding Intuitivo
+### Intuitive Onboarding
 
-- Pantalla de bienvenida animada la primera vez que abres la app
-- 5 slides que explican todas las funcionalidades
-- Indicadores de progreso visuales
-- Opción de saltar el onboarding
+- Animated welcome screen on first launch
+- 5 slides explaining all features
+- Visual progress indicators
+- Option to skip onboarding
 
-### 🏋️ Dos Modos de Entrenamiento
+### Two Training Modes
 
-1. **Rutina Completa**: Arma tu rutina de principio a fin con bloques y repeticiones
-2. **Modo Dinámico**: Agrega ejercicios sobre la marcha, uno tras otro
+1. **Full Routine**: Build your routine from start to finish with blocks and reps
+2. **Dynamic Mode**: Add exercises on the fly, one after another
 
-### 💪 Sistema de Ejercicios
+### Exercise System
 
-- **Ejercicios por Tiempo**: Define la duración en segundos
-- **Ejercicios por Repeticiones**: Especifica el número de reps
-- **Descansos**: Configura períodos de recuperación
-- **Iconos Intuitivos**: Cada ejercicio tiene un icono visual
-- **Buscador**: Encuentra rápidamente ejercicios guardados
-- **Reutilización**: Los ejercicios se guardan automáticamente para uso futuro
+- **Timed Exercises**: Set duration in seconds
+- **Rep-Based Exercises**: Specify the number of reps
+- **Rest Periods**: Configure recovery time
+- **Intuitive Icons**: Each exercise has a visual icon
+- **Search**: Quickly find saved exercises
+- **Reuse**: Exercises are automatically saved for future use
 
-### 🔄 Sistema de Bloques
+### Block System
 
-- Crea bloques de ejercicios
-- Define cuántas veces se repite cada bloque
-- Ejemplo: Bloque 1 (3 reps) → abdominales 30s, planchas 1min
+- Create exercise blocks
+- Define how many times each block repeats
+- Example: Block 1 (3 reps) → crunches 30s, planks 1min
 
-### 🎯 Ejecución Sin Interrupciones
+### Seamless Execution
 
-- **Temporizadores Automáticos**: Para ejercicios por tiempo
-- **Reconocimiento de Voz**: Di "terminé" para marcar ejercicios por repeticiones como completados
-- **Notificaciones Premium**: Vibración y sonido al completar cada ejercicio
-- **Sin Tocar el Celular**: Durante ejercicios por tiempo, la app avanza automáticamente
-- **Marca Manual**: Opción de tocar para completar ejercicios por repeticiones
+- **Automatic Timers**: For timed exercises
+- **Voice Recognition**: Say "done" to mark rep-based exercises as completed
+- **Premium Notifications**: Vibration and sound on exercise completion
+- **Hands-Free**: During timed exercises, the app advances automatically
+- **Manual Completion**: Tap to complete rep-based exercises
 
-### 📊 Gestión de Rutinas
+### Routine Management
 
-- Guarda rutinas con nombre
-- Lista de rutinas guardadas
-- Visualiza información de cada rutina (duración, bloques, ejercicios)
-- Elimina rutinas que ya no necesites
+- Save routines with a name
+- View saved routines list
+- See routine details (duration, blocks, exercises)
+- Delete routines you no longer need
 
-### 🔮 Preparado para el Futuro
+### Future-Ready
 
-- Sistema de almacenamiento con capa de abstracción
-- Botón de sincronización preparado (actualmente deshabilitado)
-- Fácil migración de AsyncStorage local a base de datos remota
-- Campo `syncedToCloud` en las rutinas para tracking
+- Storage system with abstraction layer
+- Sync button ready (currently disabled)
+- Easy migration from local AsyncStorage to remote database
+- `syncedToCloud` field in routines for tracking
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 BeatFit/
 ├── src/
-│   ├── components/       # Componentes reutilizables
+│   ├── components/       # Reusable components
 │   │   ├── Button.tsx
 │   │   ├── Card.tsx
 │   │   ├── IconPicker.tsx
@@ -66,144 +66,126 @@ BeatFit/
 │   ├── hooks/           # Custom hooks
 │   │   ├── useStorage.ts
 │   │   └── useVoiceRecognition.ts
-│   ├── navigation/      # Configuración de navegación
+│   ├── navigation/      # Navigation config
 │   │   ├── AppNavigator.tsx
 │   │   └── types.ts
-│   ├── screens/         # Pantallas de la app
+│   ├── screens/         # App screens
 │   │   ├── HomeScreen.tsx
 │   │   ├── RoutinesListScreen.tsx
 │   │   ├── CreateRoutineScreen.tsx
 │   │   └── ExecuteRoutineScreen.tsx
-│   ├── services/        # Servicios (storage, notificaciones, etc.)
+│   ├── services/        # Services (storage, notifications, etc.)
 │   │   ├── storage.ts
 │   │   └── notification.ts
-│   ├── theme/           # Sistema de diseño
+│   ├── theme/           # Design system
 │   │   ├── colors.ts
 │   │   ├── typography.ts
 │   │   └── index.ts
-│   ├── types/           # Tipos TypeScript
+│   ├── types/           # TypeScript types
 │   │   └── index.ts
-│   └── utils/           # Utilidades
+│   └── utils/           # Utilities
 │       └── helpers.ts
-├── App.tsx              # Componente principal
-├── app.json             # Configuración de Expo
+├── App.tsx              # Main component
+├── app.json             # Expo config
 └── package.json
 ```
 
-## Tecnologías Utilizadas
+## Tech Stack
 
-- **React Native**: Framework principal
-- **Expo**: Desarrollo y acceso a APIs nativas
+- **React Native**: Core framework
+- **Expo**: Development and native API access
 - **TypeScript**: Type safety
-- **React Navigation**: Navegación entre pantallas
-- **AsyncStorage**: Almacenamiento local
-- **Expo AV**: Audio y sonidos
-- **Expo Haptics**: Vibración
-- **Expo Speech**: Reconocimiento de voz (preparado para integración completa)
+- **React Navigation**: Screen navigation
+- **AsyncStorage**: Local storage
+- **Expo AV**: Audio and sounds
+- **Expo Haptics**: Vibration
+- **Expo Speech**: Voice recognition (ready for full integration)
 
-## Instalación y Desarrollo
+## Installation
 
-### Requisitos Previos
+### Prerequisites
 
 - Node.js 16+
-- npm o yarn
+- npm or yarn
 - Expo CLI
-- Expo Go app (para testing en dispositivo físico)
+- Expo Go app (for testing on a physical device)
 
-### Instalación
+### Setup
 
 ```bash
-# Instalar dependencias
+# Install dependencies
 npm install
 
-# Iniciar servidor de desarrollo
+# Start development server
 npm start
 
-# Para Android
+# For Android
 npm run android
 
-# Para iOS
+# For iOS
 npm run ios
 
-# Para Web
+# For Web
 npm run web
 ```
 
-## Uso de la Aplicación
+## How to Use
 
-### Crear una Rutina
+### Creating a Routine
 
-1. En la pantalla principal, selecciona "Crear Rutina"
-2. Ingresa un nombre para tu rutina
-3. Agrega actividades (ejercicios o descansos):
-   - Selecciona tipo: Ejercicio o Descanso
-   - Busca un ejercicio guardado o crea uno nuevo
-   - Elige un icono
-   - Define si es por tiempo o repeticiones
-   - Ingresa la duración o cantidad de reps
-4. Configura las repeticiones del bloque
-5. Agrega más bloques si necesitas
-6. Guarda la rutina
+1. On the home screen, select "Create Routine"
+2. Enter a name for your routine
+3. Add activities (exercises or rest periods):
+   - Select type: Exercise or Rest
+   - Search for a saved exercise or create a new one
+   - Choose an icon
+   - Pick time-based or rep-based
+   - Enter the duration or rep count
+4. Set block repetitions
+5. Add more blocks if needed
+6. Save the routine
 
-### Ejecutar una Rutina
+### Running a Routine
 
-1. Ve a "Mis Rutinas"
-2. Selecciona una rutina y toca "Comenzar"
-3. La app te guiará automáticamente:
-   - Para ejercicios por tiempo: espera a que termine el contador
-   - Para ejercicios por repeticiones: di "terminé" o toca el botón
-4. La app vibrará y sonará al completar cada ejercicio
-5. Pausa o detén la rutina en cualquier momento
+1. Go to "My Routines"
+2. Select a routine and tap "Start"
+3. The app will guide you automatically:
+   - For timed exercises: wait for the countdown to finish
+   - For rep-based exercises: say "done" or tap the button
+4. The app will vibrate and play a sound when each exercise is completed
+5. Pause or stop the routine at any time
 
-## Próximas Características
+## Upcoming Features
 
-- 🔄 Sincronización con base de datos remota
-- 📱 Compartir rutinas con otros usuarios
-- 📈 Estadísticas y seguimiento de progreso
-- 🎵 Música de fondo durante entrenamientos
-- ⏱️ Historial de entrenamientos completados
-- 🏆 Sistema de logros y objetivos
+- Sync with remote database
+- Share routines with other users
+- Progress tracking and statistics
+- Background music during workouts
+- Workout completion history
+- Achievements and goals system
 
-## Migración a Base de Datos Remota
+## Remote Database Migration
 
-El sistema de almacenamiento está diseñado con una interfaz `StorageService` que permite cambiar fácilmente de AsyncStorage local a una base de datos remota:
+The storage system is designed with a `StorageService` interface that allows easily switching from local AsyncStorage to a remote database:
 
 ```typescript
-// En src/services/storage.ts
+// In src/services/storage.ts
 
-// Actual: Almacenamiento local
+// Current: Local storage
 export const storageService: StorageService = new LocalStorageService();
 
-// Futuro: Cambiar a almacenamiento remoto
+// Future: Switch to remote storage
 // export const storageService: StorageService = new RemoteStorageService();
 ```
 
-Para implementar la sincronización:
+To implement sync:
 
-1. Implementar `RemoteStorageService` que cumpla la interfaz `StorageService`
-2. Agregar autenticación de usuario
-3. Configurar endpoints de API
-4. Actualizar `isUsingRemoteStorage` a `true`
-5. El botón de sincronización se habilitará automáticamente
+1. Implement `RemoteStorageService` that fulfills the `StorageService` interface
+2. Add user authentication
+3. Configure API endpoints
+4. Set `isUsingRemoteStorage` to `true`
+5. The sync button will be enabled automatically
 
-## Contribuciones
+## License
 
-Las contribuciones son bienvenidas. Por favor:
-
-1. Haz fork del proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT.
-
-## Contacto
-
-Para preguntas o soporte, por favor abre un issue en el repositorio.
-
----
-
-**¡Disfruta tus entrenamientos con BeatFit! 💪🎵**
+MIT
