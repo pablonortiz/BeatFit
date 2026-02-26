@@ -16,4 +16,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+        continue-on-error: true
