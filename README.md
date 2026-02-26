@@ -4,19 +4,19 @@ BeatFit is a React Native mobile app designed to help you track times and reps d
 
 ## Key Features
 
-### Intuitive Onboarding
+### 👋 Intuitive Onboarding
 
 - Animated welcome screen on first launch
 - 5 slides explaining all features
 - Visual progress indicators
 - Option to skip onboarding
 
-### Two Training Modes
+### 🏋️ Two Training Modes
 
 1. **Full Routine**: Build your routine from start to finish with blocks and reps
 2. **Dynamic Mode**: Add exercises on the fly, one after another
 
-### Exercise System
+### 💪 Exercise System
 
 - **Timed Exercises**: Set duration in seconds
 - **Rep-Based Exercises**: Specify the number of reps
@@ -25,13 +25,13 @@ BeatFit is a React Native mobile app designed to help you track times and reps d
 - **Search**: Quickly find saved exercises
 - **Reuse**: Exercises are automatically saved for future use
 
-### Block System
+### 🔄 Block System
 
 - Create exercise blocks
 - Define how many times each block repeats
 - Example: Block 1 (3 reps) → crunches 30s, planks 1min
 
-### Seamless Execution
+### 🎯 Seamless Execution
 
 - **Automatic Timers**: For timed exercises
 - **Voice Recognition**: Say "done" to mark rep-based exercises as completed
@@ -39,14 +39,14 @@ BeatFit is a React Native mobile app designed to help you track times and reps d
 - **Hands-Free**: During timed exercises, the app advances automatically
 - **Manual Completion**: Tap to complete rep-based exercises
 
-### Routine Management
+### 📊 Routine Management
 
 - Save routines with a name
 - View saved routines list
 - See routine details (duration, blocks, exercises)
 - Delete routines you no longer need
 
-### Future-Ready
+### 🔮 Future-Ready
 
 - Storage system with abstraction layer
 - Sync button ready (currently disabled)
@@ -157,12 +157,12 @@ npm run web
 
 ## Upcoming Features
 
-- Sync with remote database
-- Share routines with other users
-- Progress tracking and statistics
-- Background music during workouts
-- Workout completion history
-- Achievements and goals system
+- 🔄 Sync with remote database
+- 📱 Share routines with other users
+- 📈 Progress tracking and statistics
+- 🎵 Background music during workouts
+- ⏱️ Workout completion history
+- 🏆 Achievements and goals system
 
 ## Remote Database Migration
 
