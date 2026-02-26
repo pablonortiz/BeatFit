@@ -1,5 +1,9 @@
 # BeatFit - Your Personal Trainer
 
+![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Expo](https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white)
+
 BeatFit is a React Native mobile app designed to help you track times and reps during your workouts. With an intuitive, premium interface, BeatFit makes following your exercise routine easy and seamless.
 
 ## Key Features
